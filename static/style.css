@@ -1,0 +1,164 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #ff9933 0%, #ffffff 50%, #138808 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+header {
+  text-align: center;
+  padding: 24px 16px 8px;
+}
+
+header h1 {
+  font-size: 2rem;
+  color: #1a1a1a;
+  letter-spacing: 1px;
+}
+
+header p {
+  color: #444;
+  margin-top: 6px;
+  font-size: 0.95rem;
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 24px 16px 40px;
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* ── MAP ── */
+#map-wrapper {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+#india-map {
+  width: 520px;
+  max-width: 95vw;
+  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.18));
+}
+
+/* state paths */
+#india-map path,
+#india-map polygon,
+#india-map circle {
+  fill: #c8e6c9;
+  stroke: #fff;
+  stroke-width: 1.2;
+  cursor: pointer;
+  transition: fill 0.2s, filter 0.2s;
+}
+
+#india-map path:hover,
+#india-map polygon:hover,
+#india-map circle:hover {
+  fill: #ff9933;
+  filter: drop-shadow(0 0 6px rgba(255,153,51,0.7));
+}
+
+#india-map path.active,
+#india-map polygon.active,
+#india-map circle.active {
+  fill: #e53935;
+}
+
+/* ── INFO CARD ── */
+#info-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+  padding: 28px 28px 24px;
+  width: 320px;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+#info-card .placeholder {
+  text-align: center;
+  color: #aaa;
+}
+
+#info-card .placeholder .icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+#info-card .placeholder p {
+  font-size: 0.95rem;
+}
+
+#info-card .state-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e53935;
+  margin-bottom: 4px;
+}
+
+#info-card .capital {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 16px;
+}
+
+#info-card .dishes-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #ff9933;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+#info-card .dish-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#info-card .dish-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.92rem;
+  color: #333;
+  border-left: 3px solid #ff9933;
+}
+
+#info-card .dish-list li .emoji {
+  font-size: 1.3rem;
+}
+
+footer {
+  text-align: center;
+  padding: 12px;
+  color: #555;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  header h1 { font-size: 1.4rem; }
+  #india-map { width: 98vw; }
+  #info-card { width: 95vw; }
+}

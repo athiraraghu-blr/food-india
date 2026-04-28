@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>India Food Map</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+
+  <style>
+
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+    body{font-family:'Segoe UI',sans-serif;min-height:100vh;background:#f0ece3;display:flex;flex-direction:column;align-items:center}
+
+    header{width:100%;background:linear-gradient(90deg,#ff9933 0%,#fff 50%,#138808 100%);text-align:center;padding:20px 16px 14px;box-shadow:0 2px 10px rgba(0,0,0,.13)}
+
+    header h1{font-size:2rem;color:#1a1a1a}
+
+    header p{color:#444;margin-top:5px;font-size:.92rem}
+
+    .container{display:flex;justify-content:center;padding:32px 20px 48px;width:100%}
+
+    #map-wrap{position:relative;background:#ddeeff;border-radius:16px;box-shadow:0 6px 28px rgba(0,0,0,.15);overflow:hidden;flex-shrink:0}
+
+    #map-wrap svg{display:block}
+
+    .state{stroke:#fff;stroke-width:.7;cursor:pointer;transition:fill .15s,filter .15s}
+
+    .state:hover{filter:brightness(1.18) drop-shadow(0 0 4px rgba(0,0,0,.25))}
+
+    .state.active{filter:brightness(.82) drop-shadow(0 0 6px rgba(0,0,0,.4))}
+
+    #tip{position:fixed;background:rgba(0,0,0,.72);color:#fff;padding:4px 10px;border-radius:6px;font-size:.78rem;pointer-events:none;opacity:0;transition:opacity .12s;z-index:999;white-space:nowrap}
+
+    #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#555;background:#ddeeff}
+
+    #overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .22s ease;padding:16px}
+
+    #overlay.show{opacity:1;pointer-events:all}
+
+    #popup{background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.28);padding:28px 24px 24px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;position:relative;transform:scale(.88) translateY(20px);transition:transform .25s cubic-bezier(.34,1.56,.64,1);scrollbar-width:thin}
+
+    #popup::-webkit-scrollbar{width:5px}
+
+    #popup::-webkit-scrollbar-thumb{background:#ddd;border-radius:4px}
+
+    #overlay.show #popup{transform:scale(1) translateY(0)}
+
+    #close-btn{position:absolute;top:14px;right:16px;background:#f5f5f5;border:none;border-radius:50%;width:32px;height:32px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#555;transition:background .15s}
+
+    #close-btn:hover{background:#ffe0e0;color:#e53935}
+
+    .sname{font-size:1.5rem;font-weight:700;margin-bottom:3px;padding-right:36px}
+
+    .cap{font-size:.82rem;color:#999;margin-bottom:18px}
+
+    .dtitle{font-size:.73rem;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;margin-bottom:12px}
+
+    .dlist{list-style:none;display:flex;flex-direction:column;gap:10px}
+
+    .dlist li{display:flex;align-items:center;gap:13px;border-radius:12px;padding:8px 12px 8px 8px;border-left:4px solid #ff9933;animation:si .22s ease both;overflow:hidden}
+
+    .dlist li:nth-child(1){animation-delay:.03s}
+
+    .dlist li:nth-child(2){animation-delay:.09s}
+
+    .dlist li:nth-child(3){animation-delay:.15s}
+
+    .dlist li:nth-child(4){animation-delay:.21s}
+
+    .dish-img{width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0;background:#eee}
+
+    .dish-fallback{width:64px;height:64px;border-radius:10px;flex-shrink:0;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:2rem}
+
+    .dish-name{font-weight:600;font-size:.92rem;color:#222}
+
+    @keyframes si{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+
+    #hint{text-align:center;color:#888;font-size:.83rem;margin-top:-16px;margin-bottom:8px}
+
+    footer{text-align:center;padding:12px;color:#888;font-size:.77rem}
+
+    @media(max-width:640px){header h1{font-size:1.4rem}#popup{padding:22px 16px 18px}.dish-img,.dish-fallback{width:52px;height:52px}}
+
+  </style>
+
+</head>
+
+<body>
+
+<header>
+
+  <h1>🇮🇳 India Food Map</h1>
+
+  <p>Click on a state to discover its famous dishes</p>
+
+</header>
+
+<div class="container">
+
+  <div id="map-wrap"><div id="loading">🗺️ Loading map…</div></div>
+
+</div>
+
+<p id="hint">Click on any state to see its famous dishes</p>
+
+<div id="overlay">
+
+  <div id="popup">
+
+    <button id="close-btn" aria-label="Close">✕</button>
+
+    <div id="popup-content"></div>
+
+  </div>
+
+</div>
+
+<div id="tip"></div>
+
+<footer>🍛 Celebrating the culinary diversity of India — 28 States &amp; 8 Union Territories</footer>
+
+
+
+<script>
+
+const W_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/";
+
+const FOOD = {
+
+  "Andhra Pradesh":    { cap:"Amaravati",          color:"#e57373", dishes:[
+
+    {n:"Pesarattu",       e:"🥞", img:W_IMG+"5/5b/Pesarattu.jpg/240px-Pesarattu.jpg"},
+
+    {n:"Gongura Mutton",  e:"🍖", img:W_IMG+"4/4b/Gongura_mutton.jpg/240px-Gongura_mutton.jpg"},
+
+    {n:"Pulihora",        e:"🍚", img:W_IMG+"3/3e/Pulihora.jpg/240px-Pulihora.jpg"},
+
+    {n:"Bobbatlu",        e:"🫓", img:W_IMG+"e/e0/Bobbatlu.jpg/240px-Bobbatlu.jpg"}]},
+
+  "Arunachal Pradesh": { cap:"Itanagar",           color:"#64b5f6", dishes:[
+
+    {n:"Thukpa",          e:"🍜", img:W_IMG+"6/6b/Thukpa.jpg/240px-Thukpa.jpg"},
+
+    {n:"Apong (Rice Beer)",e:"🍺",img:W_IMG+"b/b4/Apong.jpg/240px-Apong.jpg"},
+
+    {n:"Bamboo Shoot Fry",e:"🌿", img:W_IMG+"a/a0/Bamboo_shoot_curry.jpg/240px-Bamboo_shoot_curry.jpg"}]},
+
+  "Assam":             { cap:"Dispur",             color:"#81c784", dishes:[
+
+    {n:"Masor Tenga",     e:"🐟", img:W_IMG+"6/6e/Masor_Tenga.jpg/240px-Masor_Tenga.jpg"},
+
+    {n:"Pitha",           e:"🍰", img:W_IMG+"5/5e/Assamese_Pitha.jpg/240px-Assamese_Pitha.jpg"},
+
+    {n:"Duck Curry",      e:"🦆", img:W_IMG+"c/c4/Duck_curry.jpg/240px-Duck_curry.jpg"},
+
+    {n:"Khar",            e:"🍲", img:W_IMG+"a/a3/Khar_dish.jpg/240px-Khar_dish.jpg"}]},
+
+  "Bihar":             { cap:"Patna",              color:"#ffb74d", dishes:[
+
+    {n:"Litti Chokha",    e:"🫓", img:W_IMG+"b/b5/Litti_chokha.jpg/240px-Litti_chokha.jpg"},
+
+    {n:"Sattu Paratha",   e:"🫓", img:W_IMG+"4/4e/Sattu_paratha.jpg/240px-Sattu_paratha.jpg"},
+
+    {n:"Thekua",          e:"🍪", img:W_IMG+"e/e3/Thekua.jpg/240px-Thekua.jpg"},
+
+    {n:"Khaja",           e:"🍬", img:W_IMG+"5/5c/Khaja.jpg/240px-Khaja.jpg"}]},
+
+  "Chhattisgarh":      { cap:"Raipur",             color:"#ba68c8", dishes:[
+
+    {n:"Chila",           e:"🥞", img:W_IMG+"c/c5/Chila.jpg/240px-Chila.jpg"},
+
+    {n:"Bafauri",         e:"🍡", img:W_IMG+"0/0e/Bafauri.jpg/240px-Bafauri.jpg"},
+
+    {n:"Muthia",          e:"🍢", img:W_IMG+"3/3d/Muthia.jpg/240px-Muthia.jpg"},
+
+    {n:"Fara",            e:"🍚", img:W_IMG+"f/f3/Fara_dish.jpg/240px-Fara_dish.jpg"}]},
+
+  "Goa":               { cap:"Panaji",             color:"#4dd0e1", dishes:[
+
+    {n:"Fish Curry Rice", e:"🐟", img:W_IMG+"a/a7/Goan_fish_curry.jpg/240px-Goan_fish_curry.jpg"},
+
+    {n:"Prawn Balchão",   e:"🦐", img:W_IMG+"5/5e/Prawn_balchao.jpg/240px-Prawn_balchao.jpg"},
+
+    {n:"Bebinca",         e:"🍮", img:W_IMG+"8/8e/Bebinca.jpg/240px-Bebinca.jpg"},
+
+    {n:"Vindaloo",        e:"🍛", img:W_IMG+"e/e5/Vindaloo.jpg/240px-Vindaloo.jpg"}]},
+
+  "Gujarat":           { cap:"Gandhinagar",        color:"#f06292", dishes:[
+
+    {n:"Dhokla",          e:"🟡", img:W_IMG+"3/3e/Dhokla.jpg/240px-Dhokla.jpg"},
+
+    {n:"Thepla",          e:"🫓", img:W_IMG+"1/1e/Thepla.jpg/240px-Thepla.jpg"},
+
+    {n:"Undhiyu",         e:"🥘", img:W_IMG+"5/5e/Undhiyu.jpg/240px-Undhiyu.jpg"},
+
+    {n:"Fafda-Jalebi",    e:"🍩", img:W_IMG+"f/f3/Fafda_jalebi.jpg/240px-Fafda_jalebi.jpg"}]},
+
+  "Haryana":           { cap:"Chandigarh",         color:"#aed581", dishes:[
+
+    {n:"Bajra Khichdi",   e:"🍚", img:W_IMG+"b/b3/Bajra_khichdi.jpg/240px-Bajra_khichdi.jpg"},
+
+    {n:"Kadhi Pakora",    e:"🍲", img:W_IMG+"5/5e/Kadhi_pakora.jpg/240px-Kadhi_pakora.jpg"},
+
+    {n:"Churma",          e:"🍮", img:W_IMG+"c/c3/Churma.jpg/240px-Churma.jpg"},
+
+    {n:"Singri ki Sabzi", e:"🥗", img:W_IMG+"a/a0/Ker_sangri.jpg/240px-Ker_sangri.jpg"}]},
+
+  "Himachal Pradesh":  { cap:"Shimla",             color:"#7986cb", dishes:[
+
+    {n:"Dham",            e:"🍽️",img:W_IMG+"d/d3/Himachali_dham.jpg/240px-Himachali_dham.jpg"},
+
+    {n:"Sidu",            e:"🫓", img:W_IMG+"5/5b/Sidu_bread.jpg/240px-Sidu_bread.jpg"},
+
+    {n:"Chha Gosht",      e:"🍖", img:W_IMG+"c/c4/Chha_gosht.jpg/240px-Chha_gosht.jpg"},
+
+    {n:"Babru",           e:"🥐", img:W_IMG+"b/b3/Babru.jpg/240px-Babru.jpg"}]},
+
+  "Jharkhand":         { cap:"Ranchi",             color:"#ff8a65", dishes:[
+
+    {n:"Litti Chokha",    e:"🫓", img:W_IMG+"b/b5/Litti_chokha.jpg/240px-Litti_chokha.jpg"},
+
+    {n:"Rugra",           e:"🍄", img:W_IMG+"a/a3/Rugra_mushroom.jpg/240px-Rugra_mushroom.jpg"},
+
+    {n:"Handia",          e:"🍺", img:W_IMG+"e/e3/Handia_rice_beer.jpg/240px-Handia_rice_beer.jpg"},
+
+    {n:"Pittha",          e:"🍡", img:W_IMG+"5/5e/Pittha.jpg/240px-Pittha.jpg"}]},
+
+  "Karnataka":         { cap:"Bengaluru",          color:"#a1887f", dishes:[
+
+    {n:"Bisi Bele Bath",  e:"🍲", img:W_IMG+"6/6e/Bisi_bele_bath.jpg/240px-Bisi_bele_bath.jpg"},
+
+    {n:"Masala Dosa",     e:"🥞", img:W_IMG+"3/3e/Masala_dosa.jpg/240px-Masala_dosa.jpg"},
+
+    {n:"Ragi Mudde",      e:"🟤", img:W_IMG+"a/a3/Ragi_mudde.jpg/240px-Ragi_mudde.jpg"},
+
+    {n:"Mysore Pak",      e:"🍬", img:W_IMG+"5/5e/Mysore_pak.jpg/240px-Mysore_pak.jpg"}]},
+
+  "Kerala":            { cap:"Thiruvananthapuram", color:"#4db6ac", dishes:[
+
+    {n:"Appam & Stew",    e:"🥞", img:W_IMG+"3/3e/Appam_with_stew.jpg/240px-Appam_with_stew.jpg"},
+
+    {n:"Kerala Fish Curry",e:"🐟",img:W_IMG+"6/6e/Kerala_fish_curry.jpg/240px-Kerala_fish_curry.jpg"},
+
+    {n:"Puttu & Kadala",  e:"🍚", img:W_IMG+"5/5e/Puttu_kadala.jpg/240px-Puttu_kadala.jpg"},
+
+    {n:"Payasam",         e:"🍮", img:W_IMG+"a/a3/Payasam.jpg/240px-Payasam.jpg"}]},
+
+  "Madhya Pradesh":    { cap:"Bhopal",             color:"#dce775", dishes:[
+
+    {n:"Dal Bafla",       e:"🍲", img:W_IMG+"d/d3/Dal_bafla.jpg/240px-Dal_bafla.jpg"},
+
+    {n:"Poha",            e:"🍚", img:W_IMG+"5/5e/Poha.jpg/240px-Poha.jpg"},
+
+    {n:"Bhutte ka Kees",  e:"🌽", img:W_IMG+"b/b3/Bhutte_ka_kees.jpg/240px-Bhutte_ka_kees.jpg"},
+
+    {n:"Malpua",          e:"🥞", img:W_IMG+"a/a3/Malpua.jpg/240px-Malpua.jpg"}]},
+
+  "Maharashtra":       { cap:"Mumbai",             color:"#e67e22", dishes:[
+
+    {n:"Vada Pav",        e:"🍔", img:W_IMG+"6/6e/Vada_pav.jpg/240px-Vada_pav.jpg"},
+
+    {n:"Puran Poli",      e:"🫓", img:W_IMG+"5/5e/Puran_poli.jpg/240px-Puran_poli.jpg"},
+
+    {n:"Misal Pav",       e:"🌶️",img:W_IMG+"3/3e/Misal_pav.jpg/240px-Misal_pav.jpg"},
+
+    {n:"Modak",           e:"🍡", img:W_IMG+"a/a3/Modak.jpg/240px-Modak.jpg"}]},
+
+  "Manipur":           { cap:"Imphal",             color:"#f48fb1", dishes:[
+
+    {n:"Eromba",          e:"🍲", img:W_IMG+"e/e3/Eromba.jpg/240px-Eromba.jpg"},
+
+    {n:"Singju",          e:"🥗", img:W_IMG+"5/5e/Singju.jpg/240px-Singju.jpg"},
+
+    {n:"Chamthong",       e:"🍜", img:W_IMG+"c/c4/Chamthong.jpg/240px-Chamthong.jpg"},
+
+    {n:"Paknam",          e:"🥘", img:W_IMG+"a/a3/Paknam.jpg/240px-Paknam.jpg"}]},
+
+  "Meghalaya":         { cap:"Shillong",           color:"#80cbc4", dishes:[
+
+    {n:"Jadoh",           e:"🍚", img:W_IMG+"6/6e/Jadoh.jpg/240px-Jadoh.jpg"},
+
+    {n:"Dohneiiong",      e:"🍖", img:W_IMG+"5/5e/Dohneiiong.jpg/240px-Dohneiiong.jpg"},
+
+    {n:"Tungrymbai",      e:"🫘", img:W_IMG+"a/a3/Tungrymbai.jpg/240px-Tungrymbai.jpg"},
+
+    {n:"Pumaloi",         e:"🍚", img:W_IMG+"b/b3/Pumaloi.jpg/240px-Pumaloi.jpg"}]},
+
+  "Mizoram":           { cap:"Aizawl",             color:"#ce93d8", dishes:[
+
+    {n:"Bai",             e:"🍲", img:W_IMG+"e/e3/Bai_dish.jpg/240px-Bai_dish.jpg"},
+
+    {n:"Vawksa Rep",      e:"🥩", img:W_IMG+"5/5e/Vawksa_rep.jpg/240px-Vawksa_rep.jpg"},
+
+    {n:"Koat Pitha",      e:"🍡", img:W_IMG+"a/a3/Koat_pitha.jpg/240px-Koat_pitha.jpg"}]},
+
+  "Nagaland":          { cap:"Kohima",             color:"#80deea", dishes:[
+
+    {n:"Smoked Pork & Bamboo Shoot",e:"🥩",img:W_IMG+"5/5e/Smoked_pork_bamboo.jpg/240px-Smoked_pork_bamboo.jpg"},
+
+    {n:"Axone",           e:"🫘", img:W_IMG+"a/a3/Axone_dish.jpg/240px-Axone_dish.jpg"},
+
+    {n:"Galho",           e:"🍲", img:W_IMG+"b/b3/Galho.jpg/240px-Galho.jpg"}]},
+
+  "Odisha":            { cap:"Bhubaneswar",        color:"#ffcc02", dishes:[
+
+    {n:"Dalma",           e:"🍲", img:W_IMG+"d/d3/Dalma.jpg/240px-Dalma.jpg"},
+
+    {n:"Pakhala Bhata",   e:"🍚", img:W_IMG+"5/5e/Pakhala_bhata.jpg/240px-Pakhala_bhata.jpg"},
+
+    {n:"Chhena Poda",     e:"🍮", img:W_IMG+"c/c4/Chhena_poda.jpg/240px-Chhena_poda.jpg"},
+
+    {n:"Rasagola",        e:"🍡", img:W_IMG+"a/a3/Rasagola.jpg/240px-Rasagola.jpg"}]},
+
+  "Punjab":            { cap:"Chandigarh",         color:"#ef9a9a", dishes:[
+
+    {n:"Butter Chicken",  e:"🍗", img:W_IMG+"4/45/Butter_chicken.jpg/240px-Butter_chicken.jpg"},
+
+    {n:"Sarson da Saag",  e:"🫓", img:W_IMG+"5/5e/Sarson_da_saag.jpg/240px-Sarson_da_saag.jpg"},
+
+    {n:"Amritsari Kulcha",e:"🫓", img:W_IMG+"a/a3/Amritsari_kulcha.jpg/240px-Amritsari_kulcha.jpg"},
+
+    {n:"Lassi",           e:"🥛", img:W_IMG+"6/6e/Lassi.jpg/240px-Lassi.jpg"}]},
+
+  "Rajasthan":         { cap:"Jaipur",             color:"#ffab40", dishes:[
+
+    {n:"Dal Baati Churma",e:"🍲", img:W_IMG+"d/d3/Dal_baati_churma.jpg/240px-Dal_baati_churma.jpg"},
+
+    {n:"Laal Maas",       e:"🍖", img:W_IMG+"5/5e/Laal_maas.jpg/240px-Laal_maas.jpg"},
+
+    {n:"Ghevar",          e:"🍰", img:W_IMG+"a/a3/Ghevar.jpg/240px-Ghevar.jpg"},
+
+    {n:"Ker Sangri",      e:"🥗", img:W_IMG+"a/a0/Ker_sangri.jpg/240px-Ker_sangri.jpg"}]},
+
+  "Sikkim":            { cap:"Gangtok",            color:"#b39ddb", dishes:[
+
+    {n:"Momos",           e:"🥟", img:W_IMG+"3/3e/Momo_(food).jpg/240px-Momo_(food).jpg"},
+
+    {n:"Thukpa",          e:"🍜", img:W_IMG+"6/6b/Thukpa.jpg/240px-Thukpa.jpg"},
+
+    {n:"Gundruk",         e:"🥬", img:W_IMG+"a/a3/Gundruk.jpg/240px-Gundruk.jpg"},
+
+    {n:"Chhurpi Soup",    e:"🍵", img:W_IMG+"b/b3/Chhurpi.jpg/240px-Chhurpi.jpg"}]},
+
+  "Tamil Nadu":        { cap:"Chennai",            color:"#f44336", dishes:[
+
+    {n:"Idli Sambar",     e:"🍚", img:W_IMG+"6/6e/Idli_sambar.jpg/240px-Idli_sambar.jpg"},
+
+    {n:"Chettinad Chicken",e:"🍗",img:W_IMG+"5/5e/Chettinad_chicken.jpg/240px-Chettinad_chicken.jpg"},
+
+    {n:"Pongal",          e:"🍚", img:W_IMG+"a/a3/Pongal_dish.jpg/240px-Pongal_dish.jpg"},
+
+    {n:"Murukku",         e:"🌀", img:W_IMG+"b/b3/Murukku.jpg/240px-Murukku.jpg"}]},
+
+  "Telangana":         { cap:"Hyderabad",          color:"#26a69a", dishes:[
+
+    {n:"Hyderabadi Biryani",e:"🍚",img:W_IMG+"a/a3/Hyderabadi_biryani.jpg/240px-Hyderabadi_biryani.jpg"},
+
+    {n:"Haleem",          e:"🍲", img:W_IMG+"5/5e/Haleem.jpg/240px-Haleem.jpg"},
+
+    {n:"Sarva Pindi",     e:"🥞", img:W_IMG+"b/b3/Sarva_pindi.jpg/240px-Sarva_pindi.jpg"},
+
+    {n:"Qubani ka Meetha",e:"🍮", img:W_IMG+"a/a3/Qubani_ka_meetha.jpg/240px-Qubani_ka_meetha.jpg"}]},
+
+  "Tripura":           { cap:"Agartala",           color:"#66bb6a", dishes:[
+
+    {n:"Mui Borok",       e:"🍲", img:W_IMG+"e/e3/Mui_borok.jpg/240px-Mui_borok.jpg"},
+
+    {n:"Chakhwi",         e:"🍖", img:W_IMG+"5/5e/Chakhwi.jpg/240px-Chakhwi.jpg"},
+
+    {n:"Wahan Mosdeng",   e:"🌶️",img:W_IMG+"a/a3/Wahan_mosdeng.jpg/240px-Wahan_mosdeng.jpg"}]},
+
+  "Uttar Pradesh":     { cap:"Lucknow",            color:"#42a5f5", dishes:[
+
+    {n:"Lucknowi Biryani",e:"🍚", img:W_IMG+"a/a3/Lucknowi_biryani.jpg/240px-Lucknowi_biryani.jpg"},
+
+    {n:"Tunday Kababi",   e:"🍢", img:W_IMG+"5/5e/Tunday_kababi.jpg/240px-Tunday_kababi.jpg"},
+
+    {n:"Petha",           e:"🍬", img:W_IMG+"b/b3/Petha_sweet.jpg/240px-Petha_sweet.jpg"},
+
+    {n:"Bedai Sabzi",     e:"🥘", img:W_IMG+"a/a3/Bedai.jpg/240px-Bedai.jpg"}]},
+
+  "Uttarakhand":       { cap:"Dehradun",           color:"#26c6da", dishes:[
+
+    {n:"Kafuli",          e:"🥬", img:W_IMG+"e/e3/Kafuli.jpg/240px-Kafuli.jpg"},
+
+    {n:"Aloo Ke Gutke",   e:"🥔", img:W_IMG+"5/5e/Aloo_ke_gutke.jpg/240px-Aloo_ke_gutke.jpg"},
+
+    {n:"Bal Mithai",      e:"🍫", img:W_IMG+"a/a3/Bal_mithai.jpg/240px-Bal_mithai.jpg"},
+
+    {n:"Chainsoo",        e:"🍲", img:W_IMG+"b/b3/Chainsoo.jpg/240px-Chainsoo.jpg"}]},
+
+  "West Bengal":       { cap:"Kolkata",            color:"#ec407a", dishes:[
+
+    {n:"Rosogolla",       e:"🍡", img:W_IMG+"a/a3/Rasgulla.jpg/240px-Rasgulla.jpg"},
+
+    {n:"Macher Jhol",     e:"🐟", img:W_IMG+"5/5e/Macher_jhol.jpg/240px-Macher_jhol.jpg"},
+
+    {n:"Kosha Mangsho",   e:"🍖", img:W_IMG+"b/b3/Kosha_mangsho.jpg/240px-Kosha_mangsho.jpg"},
+
+    {n:"Mishti Doi",      e:"🍮", img:W_IMG+"a/a3/Mishti_doi.jpg/240px-Mishti_doi.jpg"}]},
+
+  "Jammu and Kashmir": { cap:"Srinagar / Jammu",   color:"#5c6bc0", dishes:[
+
+    {n:"Rogan Josh",      e:"🍖", img:W_IMG+"5/5e/Rogan_josh.jpg/240px-Rogan_josh.jpg"},
+
+    {n:"Yakhni",          e:"🍲", img:W_IMG+"a/a3/Yakhni.jpg/240px-Yakhni.jpg"},
+
+    {n:"Dum Aloo",        e:"🥔", img:W_IMG+"b/b3/Dum_aloo.jpg/240px-Dum_aloo.jpg"},
+
+    {n:"Sheer Chai",      e:"🍵", img:W_IMG+"6/6e/Sheer_chai.jpg/240px-Sheer_chai.jpg"}]},
+
+  "Ladakh":            { cap:"Leh",                color:"#8d6e63", dishes:[
+
+    {n:"Thukpa",          e:"🍜", img:W_IMG+"6/6b/Thukpa.jpg/240px-Thukpa.jpg"},
+
+    {n:"Skyu",            e:"🍲", img:W_IMG+"a/a3/Skyu.jpg/240px-Skyu.jpg"},
+
+    {n:"Tsampa",          e:"🌾", img:W_IMG+"b/b3/Tsampa.jpg/240px-Tsampa.jpg"}]},
+
+  "Delhi":             { cap:"New Delhi",          color:"#ab47bc", dishes:[
+
+    {n:"Chole Bhature",   e:"🍛", img:W_IMG+"5/5e/Chole_bhature.jpg/240px-Chole_bhature.jpg"},
+
+    {n:"Butter Chicken",  e:"🍗", img:W_IMG+"4/45/Butter_chicken.jpg/240px-Butter_chicken.jpg"},
+
+    {n:"Paranthe Wali Gali Paratha",e:"🫓",img:W_IMG+"a/a3/Paratha.jpg/240px-Paratha.jpg"},
+
+    {n:"Jalebi",          e:"🍩", img:W_IMG+"3/3e/Jalebi.jpg/240px-Jalebi.jpg"}]},
+
+  "Andaman and Nicobar Islands":{ cap:"Port Blair", color:"#00acc1", dishes:[
+
+    {n:"Grilled Lobster", e:"🦞", img:W_IMG+"a/a3/Grilled_lobster.jpg/240px-Grilled_lobster.jpg"},
+
+    {n:"Fish Curry",      e:"🐟", img:W_IMG+"6/6e/Kerala_fish_curry.jpg/240px-Kerala_fish_curry.jpg"},
+
+    {n:"Coconut Prawn Curry",e:"🦐",img:W_IMG+"5/5e/Prawn_curry.jpg/240px-Prawn_curry.jpg"}]},
+
+  "Chandigarh":        { cap:"Chandigarh",         color:"#78909c", dishes:[
+
+    {n:"Chole Bhature",   e:"🍛", img:W_IMG+"5/5e/Chole_bhature.jpg/240px-Chole_bhature.jpg"},
+
+    {n:"Butter Chicken",  e:"🍗", img:W_IMG+"4/45/Butter_chicken.jpg/240px-Butter_chicken.jpg"},
+
+    {n:"Lassi",           e:"🥛", img:W_IMG+"6/6e/Lassi.jpg/240px-Lassi.jpg"}]},
+
+  "Puducherry":        { cap:"Puducherry",         color:"#ff7043", dishes:[
+
+    {n:"Bouillabaisse",   e:"🍲", img:W_IMG+"a/a3/Bouillabaisse.jpg/240px-Bouillabaisse.jpg"},
+
+    {n:"Crepes",          e:"🥞", img:W_IMG+"5/5e/Crepes.jpg/240px-Crepes.jpg"},
+
+    {n:"Pondicherry Fish Curry",e:"🐟",img:W_IMG+"6/6e/Kerala_fish_curry.jpg/240px-Kerala_fish_curry.jpg"}]},
+
+  "Lakshadweep":       { cap:"Kavaratti",          color:"#29b6f6", dishes:[
+
+    {n:"Tuna Curry",      e:"🐟", img:W_IMG+"a/a3/Tuna_curry.jpg/240px-Tuna_curry.jpg"},
+
+    {n:"Kallummakkaya",   e:"🦪", img:W_IMG+"5/5e/Kallummakkaya.jpg/240px-Kallummakkaya.jpg"},
+
+    {n:"Coconut Rice",    e:"🍚", img:W_IMG+"b/b3/Coconut_rice.jpg/240px-Coconut_rice.jpg"}]},
+
+  "Dadra and Nagar Haveli and Daman and Diu":{ cap:"Daman", color:"#9ccc65", dishes:[
+
+    {n:"Patoleo",         e:"🍃", img:W_IMG+"a/a3/Patoleo.jpg/240px-Patoleo.jpg"},
+
+    {n:"Seafood Curry",   e:"🦐", img:W_IMG+"5/5e/Prawn_curry.jpg/240px-Prawn_curry.jpg"},
+
+    {n:"Bebinca",         e:"🍮", img:W_IMG+"8/8e/Bebinca.jpg/240px-Bebinca.jpg"}]},
+
+};
+
+</script>
+
+
+
+<script>
+
+(async () => {
+
+  const W = Math.min(540, window.innerWidth - 32);
+
+  const H = Math.round(W * 1.18);
+
+  const wrap    = document.getElementById("map-wrap");
+
+  const loading = document.getElementById("loading");
+
+  const overlay = document.getElementById("overlay");
+
+  const content = document.getElementById("popup-content");
+
+  const closeBtn= document.getElementById("close-btn");
+
+  const tip     = document.getElementById("tip");
+
+
+
+  wrap.style.width  = W + "px";
+
+  wrap.style.height = H + "px";
+
+
+
+  const svg = d3.select("#map-wrap").append("svg").attr("width", W).attr("height", H);
+
+  const projection = d3.geoMercator().center([82.5, 22.5]).scale(W * 1.55).translate([W/2, H/2]);
+
+  const pathGen = d3.geoPath().projection(projection);
+
+
+
+  let topo;
+
+  try {
+
+    topo = await d3.json("https://raw.githubusercontent.com/udit-001/india-maps-data/main/topojson/india.json");
+
+  } catch {
+
+    loading.textContent = "⚠️ Could not load map. Check your internet connection.";
+
+    return;
+
+  }
+
+  loading.remove();
+
+
+
+  const features = topojson.feature(topo, topo.objects.states).features;
+
+
+
+  svg.selectAll(".state")
+
+    .data(features).join("path")
+
+    .attr("class", "state")
+
+    .attr("d", pathGen)
+
+    .style("fill", d => (FOOD[d.properties.st_nm] || {}).color || "#90caf9")
+
+    .on("mouseenter", function(event, d) {
+
+      tip.textContent = d.properties.st_nm;
+
+      tip.style.opacity = "1";
+
+    })
+
+    .on("mousemove", function(event) {
+
+      tip.style.left = (event.clientX + 14) + "px";
+
+      tip.style.top  = (event.clientY - 30) + "px";
+
+    })
+
+    .on("mouseleave", function() {
+
+      tip.style.opacity = "0";
+
+    })
+
+    .on("click", function(event, d) {
+
+      d3.selectAll(".state.active").classed("active", false);
+
+      d3.select(this).classed("active", true);
+
+      openPopup(d.properties.st_nm);
+
+    });
+
+
+
+  // Fetch Wikipedia thumbnail for a dish name, fall back to emoji
+  async function loadWikiImg(imgEl, fallbackEl, dishName) {
+    try {
+      const slug = encodeURIComponent(dishName.replace(/ /g, "_"));
+      const res  = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${slug}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const url  = data?.thumbnail?.source;
+      if (url) { imgEl.src = url; imgEl.style.display = "block"; fallbackEl.style.display = "none"; }
+      else throw new Error();
+    } catch { imgEl.style.display = "none"; fallbackEl.style.display = "flex"; }
+  }
+
+  function dishHTML(x, color) {
+    const bg = color + "18";
+    return `<li style="border-left-color:${color};background:${bg}" data-dish="${x.n}" data-emoji="${x.e}">
+      <img class="dish-img" style="display:none" alt="${x.n}">
+      <span class="dish-fallback">${x.e}</span>
+      <span class="dish-name">${x.n}</span>
+    </li>`;
+  }
+
+  function loadImages() {
+    document.querySelectorAll(".dlist li[data-dish]").forEach(li => {
+      loadWikiImg(li.querySelector(".dish-img"), li.querySelector(".dish-fallback"), li.dataset.dish);
+    });
+  }
+
+
+
+  function openPopup(name) {
+
+    const d = FOOD[name];
+
+    const color = (d && d.color) || "#ff9933";
+
+    document.getElementById("popup").style.borderTop = `5px solid ${color}`;
+
+    if (!d) {
+
+      content.innerHTML = `<div class="sname" style="color:${color}">${name}</div>
+
+        <div class="cap" style="margin-top:10px;color:#bbb">Dish data coming soon!</div>`;
+
+    } else {
+
+      content.innerHTML = `
+
+        <div class="sname" style="color:${color}">${name}</div>
+
+        <div class="cap">🏛️ Capital: ${d.cap}</div>
+
+        <div class="dtitle" style="color:${color}">🍽️ Famous Dishes</div>
+
+        <ul class="dlist">${d.dishes.map(x => dishHTML(x, color)).join("")}</ul>`;
+    }
+    overlay.classList.add("show");
+    // load images after DOM is updated
+    requestAnimationFrame(loadImages);
+
+  }
+
+
+
+  function closePopup() {
+
+    overlay.classList.remove("show");
+
+    document.getElementById("popup").style.borderTop = "";
+
+    d3.selectAll(".state.active").classed("active", false);
+
+  }
+
+
+
+  closeBtn.addEventListener("click", closePopup);
+
+  overlay.addEventListener("click", e => { if (e.target === overlay) closePopup(); });
+
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closePopup(); });
+
+})();
+
+</script>
+
+</body>
+
+</html>
+

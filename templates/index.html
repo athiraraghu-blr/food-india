@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>India Food Map 🍛</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<header>
+  <h1>🇮🇳 India Food Map</h1>
+  <p>Hover over a state to discover its famous dishes</p>
+</header>
+
+<div class="container">
+
+  <!-- INDIA SVG MAP (simplified, state paths with ISO IDs) -->
+  <div id="map-wrapper">
+    <svg id="india-map" viewBox="0 0 650 750" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- Jammu & Kashmir -->
+      <path id="IN-JK" d="M180,30 L230,20 L280,35 L300,60 L290,90 L260,100 L230,95 L200,80 L175,60 Z">
+        <title>Jammu &amp; Kashmir</title>
+      </path>
+
+      <!-- Ladakh -->
+      <path id="IN-LA" d="M280,35 L340,25 L390,40 L400,70 L370,90 L330,95 L300,80 L290,60 Z">
+        <title>Ladakh</title>
+      </path>
+
+      <!-- Himachal Pradesh -->
+      <path id="IN-HP" d="M200,95 L240,90 L270,100 L275,130 L250,145 L215,140 L195,120 Z">
+        <title>Himachal Pradesh</title>
+      </path>
+
+      <!-- Punjab -->
+      <path id="IN-PB" d="M160,110 L200,100 L215,140 L200,160 L170,165 L148,145 Z">
+        <title>Punjab</title>
+      </path>
+
+      <!-- Haryana -->
+      <path id="IN-HR" d="M200,140 L240,135 L255,160 L245,185 L215,190 L195,170 Z">
+        <title>Haryana</title>
+      </path>
+
+      <!-- Delhi -->
+      <path id="IN-DL" d="M228,168 L242,162 L248,175 L238,183 L225,178 Z">
+        <title>Delhi</title>
+      </path>
+
+      <!-- Uttarakhand -->
+      <path id="IN-UT" d="M255,120 L300,115 L320,135 L310,160 L275,165 L255,148 Z">
+        <title>Uttarakhand</title>
+      </path>
+
+      <!-- Uttar Pradesh -->
+      <path id="IN-UP" d="M215,185 L260,175 L320,170 L370,180 L385,210 L370,240 L330,255 L280,260 L240,250 L210,230 L205,205 Z">
+        <title>Uttar Pradesh</title>
+      </path>
+
+      <!-- Rajasthan -->
+      <path id="IN-RJ" d="M120,155 L175,148 L200,165 L210,230 L195,270 L160,295 L115,290 L80,265 L70,225 L85,185 Z">
+        <title>Rajasthan</title>
+      </path>
+
+      <!-- Bihar -->
+      <path id="IN-BR" d="M330,200 L385,195 L410,215 L405,245 L370,260 L330,255 L315,235 Z">
+        <title>Bihar</title>
+      </path>
+
+      <!-- Sikkim -->
+      <path id="IN-SK" d="M415,195 L430,190 L438,205 L428,215 L415,210 Z">
+        <title>Sikkim</title>
+      </path>
+
+      <!-- West Bengal -->
+      <path id="IN-WB" d="M405,215 L435,210 L450,235 L445,275 L430,305 L410,315 L395,295 L390,260 L400,240 Z">
+        <title>West Bengal</title>
+      </path>
+
+      <!-- Jharkhand -->
+      <path id="IN-JH" d="M370,255 L410,248 L420,275 L410,305 L385,315 L360,300 L350,275 Z">
+        <title>Jharkhand</title>
+      </path>
+
+      <!-- Arunachal Pradesh -->
+      <path id="IN-AR" d="M435,175 L500,165 L540,180 L545,205 L510,215 L465,210 L440,200 Z">
+        <title>Arunachal Pradesh</title>
+      </path>
+
+      <!-- Assam -->
+      <path id="IN-AS" d="M440,205 L510,210 L525,225 L510,245 L470,250 L445,240 L435,225 Z">
+        <title>Assam</title>
+      </path>
+
+      <!-- Nagaland -->
+      <path id="IN-NL" d="M510,225 L535,220 L545,240 L530,255 L510,250 Z">
+        <title>Nagaland</title>
+      </path>
+
+      <!-- Manipur -->
+      <path id="IN-MN" d="M510,255 L535,250 L545,270 L530,285 L510,280 Z">
+        <title>Manipur</title>
+      </path>
+
+      <!-- Mizoram -->
+      <path id="IN-MZ" d="M495,280 L515,275 L520,295 L505,310 L490,300 Z">
+        <title>Mizoram</title>
+      </path>
+
+      <!-- Tripura -->
+      <path id="IN-TR" d="M470,270 L490,265 L495,285 L480,295 L465,285 Z">
+        <title>Tripura</title>
+      </path>
+
+      <!-- Meghalaya -->
+      <path id="IN-ML" d="M445,245 L480,240 L490,258 L470,268 L445,260 Z">
+        <title>Meghalaya</title>
+      </path>
+
+      <!-- Odisha -->
+      <path id="IN-OR" d="M355,295 L395,285 L415,310 L410,350 L385,370 L355,360 L335,335 L340,305 Z">
+        <title>Odisha</title>
+      </path>
+
+      <!-- Chhattisgarh -->
+      <path id="IN-CT" d="M280,265 L335,258 L355,285 L345,330 L320,345 L285,335 L265,305 L268,278 Z">
+        <title>Chhattisgarh</title>
+      </path>
+
+      <!-- Madhya Pradesh -->
+      <path id="IN-MP" d="M160,270 L215,258 L270,265 L285,295 L270,330 L235,345 L185,340 L148,315 L140,285 Z">
+        <title>Madhya Pradesh</title>
+      </path>
+
+      <!-- Gujarat -->
+      <path id="IN-GJ" d="M65,265 L115,258 L145,275 L155,310 L140,345 L110,365 L75,360 L50,335 L45,300 Z">
+        <title>Gujarat</title>
+      </path>
+
+      <!-- Maharashtra -->
+      <path id="IN-MH" d="M140,330 L190,320 L240,330 L270,355 L265,395 L240,420 L200,430 L160,415 L130,385 L120,355 Z">
+        <title>Maharashtra</title>
+      </path>
+
+      <!-- Telangana -->
+      <path id="IN-TG" d="M270,345 L320,338 L345,360 L340,395 L315,415 L280,410 L260,385 L258,360 Z">
+        <title>Telangana</title>
+      </path>
+
+      <!-- Andhra Pradesh -->
+      <path id="IN-AP" d="M280,405 L320,398 L355,415 L370,450 L355,480 L325,495 L290,490 L265,465 L260,435 Z">
+        <title>Andhra Pradesh</title>
+      </path>
+
+      <!-- Karnataka -->
+      <path id="IN-KA" d="M175,415 L225,408 L265,420 L270,460 L255,495 L225,515 L190,510 L160,485 L150,450 L158,425 Z">
+        <title>Karnataka</title>
+      </path>
+
+      <!-- Goa -->
+      <path id="IN-GA" d="M148,450 L165,445 L170,460 L158,468 L145,462 Z">
+        <title>Goa</title>
+      </path>
+
+      <!-- Tamil Nadu -->
+      <path id="IN-TN" d="M225,510 L270,500 L300,520 L305,560 L285,595 L255,615 L225,605 L205,575 L205,540 Z">
+        <title>Tamil Nadu</title>
+      </path>
+
+      <!-- Kerala -->
+      <path id="IN-KL" d="M195,510 L225,505 L230,545 L220,580 L200,600 L180,580 L175,545 Z">
+        <title>Kerala</title>
+      </path>
+
+      <!-- Puducherry (small, shown near Tamil Nadu) -->
+      <circle id="IN-PY" cx="285" cy="555" r="6">
+        <title>Tamil Nadu</title>
+      </circle>
+
+      <!-- Andaman & Nicobar (far right, simplified) -->
+      <ellipse cx="590" cy="480" rx="12" ry="30" fill="#c8e6c9" stroke="#fff" stroke-width="1">
+        <title>Andaman &amp; Nicobar</title>
+      </ellipse>
+
+      <!-- Lakshadweep (small dots, west coast) -->
+      <circle cx="120" cy="530" r="5" fill="#c8e6c9" stroke="#fff" stroke-width="1">
+        <title>Lakshadweep</title>
+      </circle>
+
+    </svg>
+  </div>
+
+  <!-- INFO CARD -->
+  <div id="info-card">
+    <div class="placeholder">
+      <div class="icon">🗺️</div>
+      <p>Hover over a state to explore its famous dishes</p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>🍛 Celebrating the culinary diversity of India — 28 States &amp; 8 Union Territories</p>
+</footer>
+
+<script src="/static/data.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

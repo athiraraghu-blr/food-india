@@ -8,88 +8,320 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>India Food Map</title>
+  <title>Foods of India</title>
 
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
 
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --saffron:  #f97316;
+      --turmeric: #f59e0b;
+      --coral:    #ef4444;
+      --teal:     #0d9488;
+      --green:    #16a34a;
+      --bg:       #ffffff;
+      --bg2:      #f8f8f8;
+      --surface:  #fef3c7;
+      --text:     #1c1917;
+      --muted:    #78716c;
+      --border:   #fed7aa;
+      --shadow:   0 6px 32px rgba(249,115,22,.13);
+    }
 
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    *,*::before,*::after { margin:0; padding:0; box-sizing:border-box }
 
-    body{font-family:'Segoe UI',sans-serif;min-height:100vh;background:#f0ece3;display:flex;flex-direction:column;align-items:center}
+    body {
+      font-family: 'Poppins', 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      background:
+        url('https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Rangoli.jpg/1920px-Rangoli.jpg')
+        center center / cover fixed;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text);
+    }
 
-    header{width:100%;background:linear-gradient(90deg,#ff9933 0%,#fff 50%,#138808 100%);text-align:center;padding:20px 16px 14px;box-shadow:0 2px 10px rgba(0,0,0,.13)}
+    /* ── HEADER ── */
+    header {
+      width: 100%;
+      background: linear-gradient(110deg, #ff9933 0%, #ffb347 35%, #ffffff 60%, #4caf50 100%);
+      text-align: center;
+      padding: 22px 16px 16px;
+      box-shadow: 0 3px 20px rgba(249,115,22,.22);
+      position: relative;
+      overflow: hidden;
+    }
+    /* subtle mandala-like ring decoration */
+    header::before {
+      content: '';
+      position: absolute;
+      width: 320px; height: 320px;
+      border-radius: 50%;
+      border: 40px solid rgba(255,255,255,.12);
+      top: -120px; left: -80px;
+      pointer-events: none;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      width: 220px; height: 220px;
+      border-radius: 50%;
+      border: 30px solid rgba(255,255,255,.10);
+      bottom: -100px; right: -60px;
+      pointer-events: none;
+    }
+    header h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: #7c2d12;
+      letter-spacing: .4px;
+      position: relative;
+      text-shadow: 0 1px 0 rgba(255,255,255,.6);
+    }
+    header p {
+      color: #92400e;
+      margin-top: 5px;
+      font-size: .88rem;
+      position: relative;
+      font-weight: 500;
+    }
 
-    header h1{font-size:2rem;color:#1a1a1a}
+    /* ── LAYOUT ── */
+    .container { 
+      display:flex; 
+      justify-content:center; 
+      align-items:flex-start;
+      gap:32px;
+      padding:32px 20px 16px; 
+      width:100%;
+      max-width:1400px;
+    }
 
-    header p{color:#444;margin-top:5px;font-size:.92rem}
+    /* ── SIDE PANEL ── */
+    #side-panel {
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: var(--shadow), 0 0 0 2px var(--border);
+      padding: 28px 24px 24px;
+      width: 420px;
+      min-height: 500px;
+      max-height: 85vh;
+      overflow-y: auto;
+      position: sticky;
+      top: 20px;
+      flex-shrink: 0;
+      scrollbar-width: thin;
+      scrollbar-color: #fed7aa transparent;
+    }
+    #side-panel::-webkit-scrollbar { width:5px }
+    #side-panel::-webkit-scrollbar-thumb { background:#fed7aa; border-radius:4px }
 
-    .container{display:flex;justify-content:center;padding:32px 20px 48px;width:100%}
+    .placeholder { text-align:center; color:#bbb; padding:40px 20px }
+    .placeholder .icon { font-size:4rem; margin-bottom:16px }
+    .placeholder p { font-size:1.05rem; line-height:1.6 }
 
-    #map-wrap{position:relative;background:#ddeeff;border-radius:16px;box-shadow:0 6px 28px rgba(0,0,0,.15);overflow:hidden;flex-shrink:0}
+    /* ── SIDE PANEL CONTENT ── */
+    .sname {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      line-height: 1.2;
+    }
+    .cap { font-size:1rem; color:#a8a29e; margin-bottom:22px; font-weight:500 }
+    .dtitle {
+      font-size:.85rem;
+      text-transform:uppercase;
+      letter-spacing:1.4px;
+      font-weight:700;
+      margin-bottom:14px;
+    }
 
-    #map-wrap svg{display:block}
-
-    .state{stroke:#fff;stroke-width:.7;cursor:pointer;transition:fill .15s,filter .15s}
-
-    .state:hover{filter:brightness(1.18) drop-shadow(0 0 4px rgba(0,0,0,.25))}
-
-    .state.active{filter:brightness(.82) drop-shadow(0 0 6px rgba(0,0,0,.4))}
-
-    #tip{position:fixed;background:rgba(0,0,0,.72);color:#fff;padding:4px 10px;border-radius:6px;font-size:.78rem;pointer-events:none;opacity:0;transition:opacity .12s;z-index:999;white-space:nowrap}
-
-    #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#555;background:#ddeeff}
-
-    #overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .22s ease;padding:16px}
-
-    #overlay.show{opacity:1;pointer-events:all}
-
-    #popup{background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.28);padding:28px 24px 24px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;position:relative;transform:scale(.88) translateY(20px);transition:transform .25s cubic-bezier(.34,1.56,.64,1);scrollbar-width:thin}
-
-    #popup::-webkit-scrollbar{width:5px}
-
-    #popup::-webkit-scrollbar-thumb{background:#ddd;border-radius:4px}
-
-    #overlay.show #popup{transform:scale(1) translateY(0)}
-
-    #close-btn{position:absolute;top:14px;right:16px;background:#f5f5f5;border:none;border-radius:50%;width:32px;height:32px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#555;transition:background .15s}
-
-    #close-btn:hover{background:#ffe0e0;color:#e53935}
-
-    .sname{font-size:1.5rem;font-weight:700;margin-bottom:3px;padding-right:36px}
-
-    .cap{font-size:.82rem;color:#999;margin-bottom:18px}
-
-    .dtitle{font-size:.73rem;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;margin-bottom:12px}
-
-    .dlist{list-style:none;display:flex;flex-direction:column;gap:10px}
-
-    .dlist li{display:flex;align-items:center;gap:13px;border-radius:12px;padding:8px 12px 8px 8px;border-left:4px solid #ff9933;animation:si .22s ease both;overflow:hidden}
-
+    /* ── DISH LIST ── */
+    .dlist { list-style:none; display:flex; flex-direction:column; gap:10px }
+    .dlist li {
+      display:flex; align-items:center; gap:13px;
+      border-radius:14px;
+      padding:8px 12px 8px 8px;
+      border-left:4px solid var(--saffron);
+      animation: si .22s ease both;
+      overflow:hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    }
     .dlist li:nth-child(1){animation-delay:.03s}
-
     .dlist li:nth-child(2){animation-delay:.09s}
-
     .dlist li:nth-child(3){animation-delay:.15s}
-
     .dlist li:nth-child(4){animation-delay:.21s}
 
-    .dish-img{width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0;background:#eee}
+    .dish-img {
+      width:72px; height:72px;
+      border-radius:10px;
+      object-fit:cover;
+      flex-shrink:0;
+      background:#ffedd5;
+    }
+    .dish-fallback {
+      width:72px; height:72px;
+      border-radius:10px;
+      flex-shrink:0;
+      background:#fce7f3;
+      display:flex; align-items:center; justify-content:center;
+      font-size:2.2rem;
+    }
+    .dish-name { font-weight:600; font-size:1.05rem; color:#1c1917 }
 
-    .dish-fallback{width:64px;height:64px;border-radius:10px;flex-shrink:0;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:2rem}
+    /* ── TASTE BADGE ── */
+    .taste-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      margin-top: 5px;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+    .taste-badge.spicy   { background:#fff1f0; color:#c0392b; border:1px solid #fca5a5 }
+    .taste-badge.savoury { background:#f0fdf4; color:#166534; border:1px solid #86efac }
+    .taste-badge.sweet   { background:#fdf4ff; color:#7e22ce; border:1px solid #d8b4fe }
+    .taste-badge.mild    { background:#fffbeb; color:#92400e; border:1px solid #fcd34d }
 
-    .dish-name{font-weight:600;font-size:.92rem;color:#222}
+    /* ── INGREDIENTS ── */
+    .dish-detail {
+      margin-top: 7px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      animation: si .18s ease both;
+    }
+    .ingredients-label {
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .ingredients-text {
+      font-size: .82rem;
+      color: #44403c;
+      line-height: 1.5;
+    }
+    .city-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #0369a1;
+      background: #e0f2fe;
+      border: 1px solid #7dd3fc;
+      border-radius: 20px;
+      padding: 3px 10px;
+      margin-top: 5px;
+      width: fit-content;
+    }
+    .year-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #92400e;
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 20px;
+      padding: 3px 10px;
+      margin-top: 5px;
+      width: fit-content;
+    }
 
-    @keyframes si{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+    .dish-info { display:flex; flex-direction:column }
 
-    #hint{text-align:center;color:#888;font-size:.83rem;margin-top:-16px;margin-bottom:8px}
+    /* clickable dish row */
+    .dlist li { cursor:pointer }
+    .dlist li:hover { filter: brightness(.97) }
 
-    footer{text-align:center;padding:12px;color:#888;font-size:.77rem}
+    @keyframes si {
+      from { opacity:0; transform:translateX(-10px) }
+      to   { opacity:1; transform:translateX(0) }
+    }
 
-    @media(max-width:640px){header h1{font-size:1.4rem}#popup{padding:22px 16px 18px}.dish-img,.dish-fallback{width:52px;height:52px}}
+    /* ── MAP ── */
+    #map-wrap {
+      position: relative;
+      background: #1e3a5f;
+      border-radius: 20px;
+      box-shadow: var(--shadow), 0 0 0 4px var(--border);
+      border: 3px solid var(--saffron);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    #map-wrap svg { display:block }
 
+    .state { stroke:#fff; stroke-width:.7; cursor:pointer; transition:filter .15s }
+    .state:hover  { filter: brightness(1.15) drop-shadow(0 0 6px rgba(249,115,22,.55)) }
+    .state.active { filter: brightness(.88) drop-shadow(0 0 8px rgba(13,148,136,.6)) }
+
+    /* ── TOOLTIP ── */
+    #tip {
+      position: fixed;
+      background: #1c1917;
+      color: #fff;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: .76rem;
+      font-weight: 600;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .12s;
+      z-index: 999;
+      white-space: nowrap;
+      border-left: 3px solid var(--saffron);
+      letter-spacing: .3px;
+    }
+
+    /* ── LOADING ── */
+    #loading {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; color: #7fa8cc;
+      background: #1e3a5f;
+    }
+
+    /* ── HINT & FOOTER ── */
+    #hint {
+      text-align:center;
+      color: var(--muted);
+      font-size:.82rem;
+      margin-top:16px;
+      margin-bottom:12px;
+      letter-spacing:.2px;
+    }
+    footer {
+      text-align:center;
+      padding:16px;
+      color: var(--muted);
+      font-size:.76rem;
+      border-top: 2px dashed var(--border);
+      width:100%;
+      margin-top:auto;
+    }
+
+    @media(max-width:1100px){
+      .container { flex-direction:column; align-items:center }
+      #side-panel { width:95%; max-width:480px; position:relative; top:0 }
+    }
+    @media(max-width:640px){
+      header h1{font-size:2rem}
+      #side-panel{padding:22px 16px 18px}
+      .dish-img,.dish-fallback{width:52px;height:52px}
+    }
   </style>
 
 </head>
@@ -98,30 +330,20 @@
 
 <header>
 
-  <h1>🇮🇳 India Food Map</h1>
+  <h1>Foods of India</h1>
 
-  <p>Click on a state to discover its famous dishes</p>
+  <p>Hover or click a state to discover its famous dishes</p>
 
 </header>
 
 <div class="container">
-
-  <div id="map-wrap"><div id="loading">🗺️ Loading map…</div></div>
-
-</div>
-
-<p id="hint">Click on any state to see its famous dishes</p>
-
-<div id="overlay">
-
-  <div id="popup">
-
-    <button id="close-btn" aria-label="Close">✕</button>
-
-    <div id="popup-content"></div>
-
+  <div id="map-wrap"><div id="loading">🗺️&nbsp; Loading map…</div></div>
+  <div id="side-panel">
+    <div class="placeholder">
+      <div class="icon">🗺️</div>
+      <p>Click on any state to explore its famous dishes</p>
+    </div>
   </div>
-
 </div>
 
 <div id="tip"></div>
@@ -138,343 +360,343 @@ const FOOD = {
 
   "Andhra Pradesh":    { cap:"Amaravati",          color:"#e57373", dishes:[
 
-    {n:"Pesarattu",       e:"🥞", img:W_IMG+"5/5b/Pesarattu.jpg/240px-Pesarattu.jpg"},
+    {n:"Pesarattu",       e:"🥞", img:W_IMG+"5/5b/Pesarattu.jpg/240px-Pesarattu.jpg", t:"sv", ki:"Green moong dal, ginger, green chilli, cumin", city:"Vijayawada", yr:"~1800s"},
 
-    {n:"Gongura Mutton",  e:"🍖", img:W_IMG+"4/4b/Gongura_mutton.jpg/240px-Gongura_mutton.jpg"},
+    {n:"Gongura Mutton",  e:"🍖", img:W_IMG+"4/4b/Gongura_mutton.jpg/240px-Gongura_mutton.jpg", t:"sp", ki:"Gongura leaves, mutton, red chilli, tamarind", city:"Guntur", yr:"~1900s"},
 
-    {n:"Pulihora",        e:"🍚", img:W_IMG+"3/3e/Pulihora.jpg/240px-Pulihora.jpg"},
+    {n:"Pulihora",        e:"🍚", img:W_IMG+"3/3e/Pulihora.jpg/240px-Pulihora.jpg", t:"sp", ki:"Rice, tamarind, peanuts, mustard seeds, curry leaves", city:"Tirupati", yr:"~500 CE"},
 
-    {n:"Bobbatlu",        e:"🫓", img:W_IMG+"e/e0/Bobbatlu.jpg/240px-Bobbatlu.jpg"}]},
+    {n:"Bobbatlu",        e:"🫓", img:W_IMG+"e/e0/Bobbatlu.jpg/240px-Bobbatlu.jpg", t:"sw", ki:"Chana dal, jaggery, maida, cardamom, ghee", city:"Vijayawada", yr:"~1000 CE"}]},
 
   "Arunachal Pradesh": { cap:"Itanagar",           color:"#64b5f6", dishes:[
 
-    {n:"Thukpa",          e:"🍜", img:W_IMG+"6/6b/Thukpa.jpg/240px-Thukpa.jpg"},
+    {n:"Thukpa",          e:"🍜", img:W_IMG+"6/6b/Thukpa.jpg/240px-Thukpa.jpg", t:"sv", ki:"Noodles, vegetables, meat, ginger, garlic", city:"Tawang", yr:"~1400s"},
 
-    {n:"Apong (Rice Beer)",e:"🍺",img:W_IMG+"b/b4/Apong.jpg/240px-Apong.jpg"},
+    {n:"Apong (Rice Beer)",e:"🍺",img:W_IMG+"b/b4/Apong.jpg/240px-Apong.jpg", t:"sv", ki:"Rice, water, yeast, millet", city:"Pasighat", yr:"Ancient"},
 
-    {n:"Bamboo Shoot Fry",e:"🌿", img:W_IMG+"a/a0/Bamboo_shoot_curry.jpg/240px-Bamboo_shoot_curry.jpg"}]},
+    {n:"Bamboo Shoot Fry",e:"🌿", img:W_IMG+"a/a0/Bamboo_shoot_curry.jpg/240px-Bamboo_shoot_curry.jpg", t:"sp", ki:"Bamboo shoots, chilli, garlic, fermented fish", city:"Itanagar", yr:"Ancient"}]},
 
   "Assam":             { cap:"Dispur",             color:"#81c784", dishes:[
 
-    {n:"Masor Tenga",     e:"🐟", img:W_IMG+"6/6e/Masor_Tenga.jpg/240px-Masor_Tenga.jpg"},
+    {n:"Masor Tenga",     e:"🐟", img:W_IMG+"6/6e/Masor_Tenga.jpg/240px-Masor_Tenga.jpg", t:"sp", ki:"Fish, tomato, lemon, mustard oil, turmeric", city:"Guwahati", yr:"~1600s"},
 
-    {n:"Pitha",           e:"🍰", img:W_IMG+"5/5e/Assamese_Pitha.jpg/240px-Assamese_Pitha.jpg"},
+    {n:"Pitha",           e:"🍰", img:W_IMG+"5/5e/Assamese_Pitha.jpg/240px-Assamese_Pitha.jpg", t:"sw", ki:"Rice flour, jaggery, coconut, sesame", city:"Guwahati", yr:"~1000 CE"},
 
-    {n:"Duck Curry",      e:"🦆", img:W_IMG+"c/c4/Duck_curry.jpg/240px-Duck_curry.jpg"},
+    {n:"Duck Curry",      e:"🦆", img:W_IMG+"c/c4/Duck_curry.jpg/240px-Duck_curry.jpg", t:"sp", ki:"Duck, mustard oil, ginger, garlic, turmeric", city:"Jorhat", yr:"~1700s"},
 
-    {n:"Khar",            e:"🍲", img:W_IMG+"a/a3/Khar_dish.jpg/240px-Khar_dish.jpg"}]},
+    {n:"Khar",            e:"🍲", img:W_IMG+"a/a3/Khar_dish.jpg/240px-Khar_dish.jpg", t:"sv", ki:"Raw papaya, banana peel ash, mustard oil, lentils", city:"Guwahati", yr:"~1500s"}]},
 
   "Bihar":             { cap:"Patna",              color:"#ffb74d", dishes:[
 
-    {n:"Litti Chokha",    e:"🫓", img:W_IMG+"b/b5/Litti_chokha.jpg/240px-Litti_chokha.jpg"},
+    {n:"Litti Chokha",    e:"🫓", img:W_IMG+"b/b5/Litti_chokha.jpg/240px-Litti_chokha.jpg", t:"sv", ki:"Wheat flour, sattu, roasted eggplant, tomato, ghee", city:"Patna", yr:"~1800s"},
 
-    {n:"Sattu Paratha",   e:"🫓", img:W_IMG+"4/4e/Sattu_paratha.jpg/240px-Sattu_paratha.jpg"},
+    {n:"Sattu Paratha",   e:"🫓", img:W_IMG+"4/4e/Sattu_paratha.jpg/240px-Sattu_paratha.jpg", t:"sv", ki:"Sattu flour, wheat flour, onion, green chilli, mustard oil", city:"Patna", yr:"~1700s"},
 
-    {n:"Thekua",          e:"🍪", img:W_IMG+"e/e3/Thekua.jpg/240px-Thekua.jpg"},
+    {n:"Thekua",          e:"🍪", img:W_IMG+"e/e3/Thekua.jpg/240px-Thekua.jpg", t:"sw", ki:"Wheat flour, jaggery, coconut, ghee, fennel", city:"Patna", yr:"~1000 CE"},
 
-    {n:"Khaja",           e:"🍬", img:W_IMG+"5/5c/Khaja.jpg/240px-Khaja.jpg"}]},
+    {n:"Khaja",           e:"🍬", img:W_IMG+"5/5c/Khaja.jpg/240px-Khaja.jpg", t:"sw", ki:"Maida, sugar, ghee, cardamom", city:"Silao", yr:"~300 BCE"}]},
 
   "Chhattisgarh":      { cap:"Raipur",             color:"#ba68c8", dishes:[
 
-    {n:"Chila",           e:"🥞", img:W_IMG+"c/c5/Chila.jpg/240px-Chila.jpg"},
+    {n:"Chila",           e:"🥞", img:W_IMG+"c/c5/Chila.jpg/240px-Chila.jpg", t:"sv", ki:"Rice flour, moong dal, onion, green chilli, coriander", city:"Raipur", yr:"~1500s"},
 
-    {n:"Bafauri",         e:"🍡", img:W_IMG+"0/0e/Bafauri.jpg/240px-Bafauri.jpg"},
+    {n:"Bafauri",         e:"🍡", img:W_IMG+"0/0e/Bafauri.jpg/240px-Bafauri.jpg", t:"sv", ki:"Chana dal, ginger, garlic, green chilli, spices", city:"Raipur", yr:"~1700s"},
 
-    {n:"Muthia",          e:"🍢", img:W_IMG+"3/3d/Muthia.jpg/240px-Muthia.jpg"},
+    {n:"Muthia",          e:"🍢", img:W_IMG+"3/3d/Muthia.jpg/240px-Muthia.jpg", t:"sv", ki:"Bottle gourd, wheat flour, besan, turmeric, sesame", city:"Bilaspur", yr:"~1800s"},
 
-    {n:"Fara",            e:"🍚", img:W_IMG+"f/f3/Fara_dish.jpg/240px-Fara_dish.jpg"}]},
+    {n:"Fara",            e:"🍚", img:W_IMG+"f/f3/Fara_dish.jpg/240px-Fara_dish.jpg", t:"sv", ki:"Rice flour, chana dal, ginger, green chilli", city:"Raipur", yr:"~1600s"}]},
 
   "Goa":               { cap:"Panaji",             color:"#4dd0e1", dishes:[
 
-    {n:"Fish Curry Rice", e:"🐟", img:W_IMG+"a/a7/Goan_fish_curry.jpg/240px-Goan_fish_curry.jpg"},
+    {n:"Fish Curry Rice", e:"🐟", img:W_IMG+"a/a7/Goan_fish_curry.jpg/240px-Goan_fish_curry.jpg", t:"sp", ki:"Fish, coconut milk, kokum, red chilli, turmeric", city:"Panaji", yr:"~1500s"},
 
-    {n:"Prawn Balchão",   e:"🦐", img:W_IMG+"5/5e/Prawn_balchao.jpg/240px-Prawn_balchao.jpg"},
+    {n:"Prawn Balchão",   e:"🦐", img:W_IMG+"5/5e/Prawn_balchao.jpg/240px-Prawn_balchao.jpg", t:"sp", ki:"Prawns, vinegar, red chilli, garlic, tomato", city:"Margao", yr:"~1600s"},
 
-    {n:"Bebinca",         e:"🍮", img:W_IMG+"8/8e/Bebinca.jpg/240px-Bebinca.jpg"},
+    {n:"Bebinca",         e:"🍮", img:W_IMG+"8/8e/Bebinca.jpg/240px-Bebinca.jpg", t:"sw", ki:"Coconut milk, eggs, sugar, maida, ghee", city:"Panaji", yr:"~1600s"},
 
-    {n:"Vindaloo",        e:"🍛", img:W_IMG+"e/e5/Vindaloo.jpg/240px-Vindaloo.jpg"}]},
+    {n:"Vindaloo",        e:"🍛", img:W_IMG+"e/e5/Vindaloo.jpg/240px-Vindaloo.jpg", t:"sp", ki:"Pork/chicken, vinegar, red chilli, garlic, ginger", city:"Old Goa", yr:"~1500s"}]},
 
   "Gujarat":           { cap:"Gandhinagar",        color:"#f06292", dishes:[
 
-    {n:"Dhokla",          e:"🟡", img:W_IMG+"3/3e/Dhokla.jpg/240px-Dhokla.jpg"},
+    {n:"Dhokla",          e:"🟡", img:W_IMG+"3/3e/Dhokla.jpg/240px-Dhokla.jpg", t:"sv", ki:"Besan, yogurt, turmeric, mustard seeds, curry leaves", city:"Ahmedabad", yr:"~1600s"},
 
-    {n:"Thepla",          e:"🫓", img:W_IMG+"1/1e/Thepla.jpg/240px-Thepla.jpg"},
+    {n:"Thepla",          e:"🫓", img:W_IMG+"1/1e/Thepla.jpg/240px-Thepla.jpg", t:"sv", ki:"Wheat flour, methi leaves, yogurt, turmeric, sesame", city:"Ahmedabad", yr:"~1700s"},
 
-    {n:"Undhiyu",         e:"🥘", img:W_IMG+"5/5e/Undhiyu.jpg/240px-Undhiyu.jpg"},
+    {n:"Undhiyu",         e:"🥘", img:W_IMG+"5/5e/Undhiyu.jpg/240px-Undhiyu.jpg", t:"sv", ki:"Mixed vegetables, coconut, fenugreek, spices, oil", city:"Surat", yr:"~1800s"},
 
-    {n:"Fafda-Jalebi",    e:"🍩", img:W_IMG+"f/f3/Fafda_jalebi.jpg/240px-Fafda_jalebi.jpg"}]},
+    {n:"Fafda-Jalebi",    e:"🍩", img:W_IMG+"f/f3/Fafda_jalebi.jpg/240px-Fafda_jalebi.jpg", t:"sw", ki:"Besan, turmeric, ajwain, maida, sugar syrup", city:"Surat", yr:"~1800s"}]},
 
   "Haryana":           { cap:"Chandigarh",         color:"#aed581", dishes:[
 
-    {n:"Bajra Khichdi",   e:"🍚", img:W_IMG+"b/b3/Bajra_khichdi.jpg/240px-Bajra_khichdi.jpg"},
+    {n:"Bajra Khichdi",   e:"🍚", img:W_IMG+"b/b3/Bajra_khichdi.jpg/240px-Bajra_khichdi.jpg", t:"sv", ki:"Pearl millet, moong dal, ghee, cumin, salt", city:"Hisar", yr:"~1500s"},
 
-    {n:"Kadhi Pakora",    e:"🍲", img:W_IMG+"5/5e/Kadhi_pakora.jpg/240px-Kadhi_pakora.jpg"},
+    {n:"Kadhi Pakora",    e:"🍲", img:W_IMG+"5/5e/Kadhi_pakora.jpg/240px-Kadhi_pakora.jpg", t:"sv", ki:"Yogurt, besan, onion, mustard seeds, curry leaves", city:"Rohtak", yr:"~1700s"},
 
-    {n:"Churma",          e:"🍮", img:W_IMG+"c/c3/Churma.jpg/240px-Churma.jpg"},
+    {n:"Churma",          e:"🍮", img:W_IMG+"c/c3/Churma.jpg/240px-Churma.jpg", t:"sw", ki:"Wheat flour, ghee, jaggery, cardamom, dry fruits", city:"Gurugram", yr:"~1700s"},
 
-    {n:"Singri ki Sabzi", e:"🥗", img:W_IMG+"a/a0/Ker_sangri.jpg/240px-Ker_sangri.jpg"}]},
+    {n:"Singri ki Sabzi", e:"🥗", img:W_IMG+"a/a0/Ker_sangri.jpg/240px-Ker_sangri.jpg", t:"sv", ki:"Ker berries, sangri beans, dry red chilli, mustard oil", city:"Hisar", yr:"~1800s"}]},
 
   "Himachal Pradesh":  { cap:"Shimla",             color:"#7986cb", dishes:[
 
-    {n:"Dham",            e:"🍽️",img:W_IMG+"d/d3/Himachali_dham.jpg/240px-Himachali_dham.jpg"},
+    {n:"Dham",            e:"🍽️",img:W_IMG+"d/d3/Himachali_dham.jpg/240px-Himachali_dham.jpg", t:"sv", ki:"Rice, dal, rajma, curd, ghee, spices", city:"Mandi", yr:"~1700s"},
 
-    {n:"Sidu",            e:"🫓", img:W_IMG+"5/5b/Sidu_bread.jpg/240px-Sidu_bread.jpg"},
+    {n:"Sidu",            e:"🫓", img:W_IMG+"5/5b/Sidu_bread.jpg/240px-Sidu_bread.jpg", t:"sv", ki:"Wheat flour, yeast, poppy seeds, ghee", city:"Kullu", yr:"~1800s"},
 
-    {n:"Chha Gosht",      e:"🍖", img:W_IMG+"c/c4/Chha_gosht.jpg/240px-Chha_gosht.jpg"},
+    {n:"Chha Gosht",      e:"🍖", img:W_IMG+"c/c4/Chha_gosht.jpg/240px-Chha_gosht.jpg", t:"sp", ki:"Mutton, yogurt, gram flour, ginger, spices", city:"Shimla", yr:"~1800s"},
 
-    {n:"Babru",           e:"🥐", img:W_IMG+"b/b3/Babru.jpg/240px-Babru.jpg"}]},
+    {n:"Babru",           e:"🥐", img:W_IMG+"b/b3/Babru.jpg/240px-Babru.jpg", t:"sv", ki:"Black gram, wheat flour, oil, salt", city:"Shimla", yr:"~1900s"}]},
 
   "Jharkhand":         { cap:"Ranchi",             color:"#ff8a65", dishes:[
 
-    {n:"Litti Chokha",    e:"🫓", img:W_IMG+"b/b5/Litti_chokha.jpg/240px-Litti_chokha.jpg"},
+    {n:"Dhuska",    e:"🥞", img:W_IMG+"b/b5/Litti_chokha.jpg/240px-Litti_chokha.jpg", t:"sv", ki:"Rice, chana dal, garlic, green chilli, oil", city:"Ranchi", yr:"~1800s"},
 
-    {n:"Rugra",           e:"🍄", img:W_IMG+"a/a3/Rugra_mushroom.jpg/240px-Rugra_mushroom.jpg"},
+    {n:"Rugra",           e:"🍄", img:W_IMG+"a/a3/Rugra_mushroom.jpg/240px-Rugra_mushroom.jpg", t:"sp", ki:"Wild mushrooms, onion, garlic, turmeric, oil", city:"Ranchi", yr:"Ancient"},
 
-    {n:"Handia",          e:"🍺", img:W_IMG+"e/e3/Handia_rice_beer.jpg/240px-Handia_rice_beer.jpg"},
+    {n:"Handia",          e:"🍺", img:W_IMG+"e/e3/Handia_rice_beer.jpg/240px-Handia_rice_beer.jpg", t:"sv", ki:"Rice, water, herbal roots, yeast", city:"Ranchi", yr:"Ancient"},
 
-    {n:"Pittha",          e:"🍡", img:W_IMG+"5/5e/Pittha.jpg/240px-Pittha.jpg"}]},
+    {n:"Pittha",          e:"🍡", img:W_IMG+"5/5e/Pittha.jpg/240px-Pittha.jpg", t:"sw", ki:"Rice flour, chana dal, jaggery, coconut", city:"Ranchi", yr:"~1000 CE"}]},
 
   "Karnataka":         { cap:"Bengaluru",          color:"#a1887f", dishes:[
 
-    {n:"Bisi Bele Bath",  e:"🍲", img:W_IMG+"6/6e/Bisi_bele_bath.jpg/240px-Bisi_bele_bath.jpg"},
+    {n:"Bisi Bele Bath",  e:"🍲", img:W_IMG+"6/6e/Bisi_bele_bath.jpg/240px-Bisi_bele_bath.jpg", t:"sp", ki:"Rice, toor dal, tamarind, ghee, spice powder", city:"Bengaluru", yr:"~1700s"},
 
-    {n:"Masala Dosa",     e:"🥞", img:W_IMG+"3/3e/Masala_dosa.jpg/240px-Masala_dosa.jpg"},
+    {n:"Masala Dosa",     e:"🥞", img:W_IMG+"3/3e/Masala_dosa.jpg/240px-Masala_dosa.jpg", t:"sv", ki:"Rice, urad dal, potato, onion, mustard seeds", city:"Bengaluru", yr:"~1900s"},
 
-    {n:"Ragi Mudde",      e:"🟤", img:W_IMG+"a/a3/Ragi_mudde.jpg/240px-Ragi_mudde.jpg"},
+    {n:"Ragi Mudde",      e:"🟤", img:W_IMG+"a/a3/Ragi_mudde.jpg/240px-Ragi_mudde.jpg", t:"sv", ki:"Finger millet flour, water, salt", city:"Bengaluru", yr:"Ancient"},
 
-    {n:"Mysore Pak",      e:"🍬", img:W_IMG+"5/5e/Mysore_pak.jpg/240px-Mysore_pak.jpg"}]},
+    {n:"Mysore Pak",      e:"🍬", img:W_IMG+"5/5e/Mysore_pak.jpg/240px-Mysore_pak.jpg", t:"sw", ki:"Besan, ghee, sugar, cardamom", city:"Mysuru", yr:"1935"}]},
 
   "Kerala":            { cap:"Thiruvananthapuram", color:"#4db6ac", dishes:[
 
-    {n:"Appam & Stew",    e:"🥞", img:W_IMG+"3/3e/Appam_with_stew.jpg/240px-Appam_with_stew.jpg"},
+    {n:"Appam & Stew",    e:"🥞", img:W_IMG+"3/3e/Appam_with_stew.jpg/240px-Appam_with_stew.jpg", t:"sv", ki:"Rice flour, coconut milk, yeast, vegetables, spices", city:"Kochi", yr:"~1800s"},
 
-    {n:"Kerala Fish Curry",e:"🐟",img:W_IMG+"6/6e/Kerala_fish_curry.jpg/240px-Kerala_fish_curry.jpg"},
+    {n:"Kerala Fish Curry",e:"🐟",img:W_IMG+"6/6e/Kerala_fish_curry.jpg/240px-Kerala_fish_curry.jpg", t:"sp", ki:"Fish, coconut milk, kudampuli, green chilli, curry leaves", city:"Thiruvananthapuram", yr:"~1500s"},
 
-    {n:"Puttu & Kadala",  e:"🍚", img:W_IMG+"5/5e/Puttu_kadala.jpg/240px-Puttu_kadala.jpg"},
+    {n:"Puttu & Kadala",  e:"🍚", img:W_IMG+"5/5e/Puttu_kadala.jpg/240px-Puttu_kadala.jpg", t:"sv", ki:"Rice flour, coconut, black chickpeas, onion, spices", city:"Kozhikode", yr:"~1700s"},
 
-    {n:"Payasam",         e:"🍮", img:W_IMG+"a/a3/Payasam.jpg/240px-Payasam.jpg"}]},
+    {n:"Payasam",         e:"🍮", img:W_IMG+"a/a3/Payasam.jpg/240px-Payasam.jpg", t:"sw", ki:"Milk, rice/vermicelli, sugar, cardamom, cashews", city:"Thrissur", yr:"~200 BCE"}]},
 
   "Madhya Pradesh":    { cap:"Bhopal",             color:"#dce775", dishes:[
 
-    {n:"Dal Bafla",       e:"🍲", img:W_IMG+"d/d3/Dal_bafla.jpg/240px-Dal_bafla.jpg"},
+    {n:"Dal Bafla",       e:"🍲", img:W_IMG+"d/d3/Dal_bafla.jpg/240px-Dal_bafla.jpg", t:"sv", ki:"Wheat flour, toor dal, ghee, turmeric, spices", city:"Bhopal", yr:"~1700s"},
 
-    {n:"Poha",            e:"🍚", img:W_IMG+"5/5e/Poha.jpg/240px-Poha.jpg"},
+    {n:"Poha",            e:"🍚", img:W_IMG+"5/5e/Poha.jpg/240px-Poha.jpg", t:"sv", ki:"Flattened rice, onion, mustard seeds, curry leaves, lemon", city:"Indore", yr:"~1800s"},
 
-    {n:"Bhutte ka Kees",  e:"🌽", img:W_IMG+"b/b3/Bhutte_ka_kees.jpg/240px-Bhutte_ka_kees.jpg"},
+    {n:"Bhutte ka Kees",  e:"🌽", img:W_IMG+"b/b3/Bhutte_ka_kees.jpg/240px-Bhutte_ka_kees.jpg", t:"sv", ki:"Grated corn, milk, mustard seeds, green chilli, coriander", city:"Indore", yr:"~1900s"},
 
-    {n:"Malpua",          e:"🥞", img:W_IMG+"a/a3/Malpua.jpg/240px-Malpua.jpg"}]},
+    {n:"Malpua",          e:"🥞", img:W_IMG+"a/a3/Malpua.jpg/240px-Malpua.jpg", t:"sw", ki:"Maida, milk, sugar, fennel, ghee", city:"Ujjain", yr:"~1000 CE"}]},
 
   "Maharashtra":       { cap:"Mumbai",             color:"#e67e22", dishes:[
 
-    {n:"Vada Pav",        e:"🍔", img:W_IMG+"6/6e/Vada_pav.jpg/240px-Vada_pav.jpg"},
+    {n:"Vada Pav",        e:"🍔", img:W_IMG+"6/6e/Vada_pav.jpg/240px-Vada_pav.jpg", t:"sp", ki:"Potato, besan, bread roll, green chutney, garlic chutney", city:"Mumbai", yr:"1966"},
 
-    {n:"Puran Poli",      e:"🫓", img:W_IMG+"5/5e/Puran_poli.jpg/240px-Puran_poli.jpg"},
+    {n:"Puran Poli",      e:"🫓", img:W_IMG+"5/5e/Puran_poli.jpg/240px-Puran_poli.jpg", t:"sw", ki:"Chana dal, jaggery, wheat flour, cardamom, ghee", city:"Pune", yr:"~1000 CE"},
 
-    {n:"Misal Pav",       e:"🌶️",img:W_IMG+"3/3e/Misal_pav.jpg/240px-Misal_pav.jpg"},
+    {n:"Misal Pav",       e:"🌶️",img:W_IMG+"3/3e/Misal_pav.jpg/240px-Misal_pav.jpg", t:"sp", ki:"Sprouted moth beans, onion, tomato, spices, bread", city:"Kolhapur", yr:"~1900s"},
 
-    {n:"Modak",           e:"🍡", img:W_IMG+"a/a3/Modak.jpg/240px-Modak.jpg"}]},
+    {n:"Modak",           e:"🍡", img:W_IMG+"a/a3/Modak.jpg/240px-Modak.jpg", t:"sw", ki:"Rice flour, coconut, jaggery, cardamom, ghee", city:"Mumbai", yr:"~1000 CE"}]},
 
   "Manipur":           { cap:"Imphal",             color:"#f48fb1", dishes:[
 
-    {n:"Eromba",          e:"🍲", img:W_IMG+"e/e3/Eromba.jpg/240px-Eromba.jpg"},
+    {n:"Eromba",          e:"🍲", img:W_IMG+"e/e3/Eromba.jpg/240px-Eromba.jpg", t:"sp", ki:"Fermented fish, vegetables, chilli, mustard oil", city:"Imphal", yr:"~1600s"},
 
-    {n:"Singju",          e:"🥗", img:W_IMG+"5/5e/Singju.jpg/240px-Singju.jpg"},
+    {n:"Singju",          e:"🥗", img:W_IMG+"5/5e/Singju.jpg/240px-Singju.jpg", t:"sp", ki:"Banana flower, cabbage, fermented fish, chilli, lime", city:"Imphal", yr:"~1700s"},
 
-    {n:"Chamthong",       e:"🍜", img:W_IMG+"c/c4/Chamthong.jpg/240px-Chamthong.jpg"},
+    {n:"Chamthong",       e:"🍜", img:W_IMG+"c/c4/Chamthong.jpg/240px-Chamthong.jpg", t:"sv", ki:"Seasonal vegetables, water, salt, ginger", city:"Imphal", yr:"~1600s"},
 
-    {n:"Paknam",          e:"🥘", img:W_IMG+"a/a3/Paknam.jpg/240px-Paknam.jpg"}]},
+    {n:"Paknam",          e:"🥘", img:W_IMG+"a/a3/Paknam.jpg/240px-Paknam.jpg", t:"sv", ki:"Fish, rice flour, banana leaf, herbs, spices", city:"Imphal", yr:"~1700s"}]},
 
   "Meghalaya":         { cap:"Shillong",           color:"#80cbc4", dishes:[
 
-    {n:"Jadoh",           e:"🍚", img:W_IMG+"6/6e/Jadoh.jpg/240px-Jadoh.jpg"},
+    {n:"Jadoh",           e:"🍚", img:W_IMG+"6/6e/Jadoh.jpg/240px-Jadoh.jpg", t:"sv", ki:"Rice, pork/chicken, turmeric, ginger, onion", city:"Shillong", yr:"~1700s"},
 
-    {n:"Dohneiiong",      e:"🍖", img:W_IMG+"5/5e/Dohneiiong.jpg/240px-Dohneiiong.jpg"},
+    {n:"Dohneiiong",      e:"🍖", img:W_IMG+"5/5e/Dohneiiong.jpg/240px-Dohneiiong.jpg", t:"sv", ki:"Pork, black sesame, onion, ginger, garlic", city:"Shillong", yr:"~1800s"},
 
-    {n:"Tungrymbai",      e:"🫘", img:W_IMG+"a/a3/Tungrymbai.jpg/240px-Tungrymbai.jpg"},
+    {n:"Tungrymbai",      e:"🫘", img:W_IMG+"a/a3/Tungrymbai.jpg/240px-Tungrymbai.jpg", t:"sv", ki:"Fermented soybean, pork, chilli, ginger", city:"Shillong", yr:"Ancient"},
 
-    {n:"Pumaloi",         e:"🍚", img:W_IMG+"b/b3/Pumaloi.jpg/240px-Pumaloi.jpg"}]},
+    {n:"Pumaloi",         e:"🍚", img:W_IMG+"b/b3/Pumaloi.jpg/240px-Pumaloi.jpg", t:"sv", ki:"Rice flour, water, salt", city:"Shillong", yr:"~1700s"}]},
 
   "Mizoram":           { cap:"Aizawl",             color:"#ce93d8", dishes:[
 
-    {n:"Bai",             e:"🍲", img:W_IMG+"e/e3/Bai_dish.jpg/240px-Bai_dish.jpg"},
+    {n:"Bai",             e:"🍲", img:W_IMG+"e/e3/Bai_dish.jpg/240px-Bai_dish.jpg", t:"sv", ki:"Pork/vegetables, bamboo shoot, chilli, salt", city:"Aizawl", yr:"~1800s"},
 
-    {n:"Vawksa Rep",      e:"🥩", img:W_IMG+"5/5e/Vawksa_rep.jpg/240px-Vawksa_rep.jpg"},
+    {n:"Vawksa Rep",      e:"🥩", img:W_IMG+"5/5e/Vawksa_rep.jpg/240px-Vawksa_rep.jpg", t:"sv", ki:"Smoked pork, chilli, ginger, garlic", city:"Aizawl", yr:"~1800s"},
 
-    {n:"Koat Pitha",      e:"🍡", img:W_IMG+"a/a3/Koat_pitha.jpg/240px-Koat_pitha.jpg"}]},
+    {n:"Koat Pitha",      e:"🍡", img:W_IMG+"a/a3/Koat_pitha.jpg/240px-Koat_pitha.jpg", t:"sw", ki:"Rice flour, banana, jaggery, oil", city:"Aizawl", yr:"~1900s"}]},
 
   "Nagaland":          { cap:"Kohima",             color:"#80deea", dishes:[
 
-    {n:"Smoked Pork & Bamboo Shoot",e:"🥩",img:W_IMG+"5/5e/Smoked_pork_bamboo.jpg/240px-Smoked_pork_bamboo.jpg"},
+    {n:"Smoked Pork & Bamboo Shoot",e:"🥩",img:W_IMG+"5/5e/Smoked_pork_bamboo.jpg/240px-Smoked_pork_bamboo.jpg", t:"sp", ki:"Smoked pork, bamboo shoots, chilli, fermented soybean", city:"Kohima", yr:"Ancient"},
 
-    {n:"Axone",           e:"🫘", img:W_IMG+"a/a3/Axone_dish.jpg/240px-Axone_dish.jpg"},
+    {n:"Axone",           e:"🫘", img:W_IMG+"a/a3/Axone_dish.jpg/240px-Axone_dish.jpg", t:"sp", ki:"Fermented soybean, pork, chilli, ginger", city:"Dimapur", yr:"Ancient"},
 
-    {n:"Galho",           e:"🍲", img:W_IMG+"b/b3/Galho.jpg/240px-Galho.jpg"}]},
+    {n:"Galho",           e:"🍲", img:W_IMG+"b/b3/Galho.jpg/240px-Galho.jpg", t:"sv", ki:"Rice, meat, vegetables, ginger, chilli", city:"Kohima", yr:"~1700s"}]},
 
   "Odisha":            { cap:"Bhubaneswar",        color:"#ffcc02", dishes:[
 
-    {n:"Dalma",           e:"🍲", img:W_IMG+"d/d3/Dalma.jpg/240px-Dalma.jpg"},
+    {n:"Dalma",           e:"🍲", img:W_IMG+"d/d3/Dalma.jpg/240px-Dalma.jpg", t:"sv", ki:"Toor dal, raw papaya, raw banana, tomato, ghee", city:"Bhubaneswar", yr:"~1000 CE"},
 
-    {n:"Pakhala Bhata",   e:"🍚", img:W_IMG+"5/5e/Pakhala_bhata.jpg/240px-Pakhala_bhata.jpg"},
+    {n:"Pakhala Bhata",   e:"🍚", img:W_IMG+"5/5e/Pakhala_bhata.jpg/240px-Pakhala_bhata.jpg", t:"sv", ki:"Cooked rice, water, curd, salt, cucumber", city:"Cuttack", yr:"~1000 CE"},
 
-    {n:"Chhena Poda",     e:"🍮", img:W_IMG+"c/c4/Chhena_poda.jpg/240px-Chhena_poda.jpg"},
+    {n:"Chhena Poda",     e:"🍮", img:W_IMG+"c/c4/Chhena_poda.jpg/240px-Chhena_poda.jpg", t:"sw", ki:"Cottage cheese, sugar, cardamom, cashews, ghee", city:"Nayagarh", yr:"~1900s"},
 
-    {n:"Rasagola",        e:"🍡", img:W_IMG+"a/a3/Rasagola.jpg/240px-Rasagola.jpg"}]},
+    {n:"Rasagola",        e:"🍡", img:W_IMG+"a/a3/Rasagola.jpg/240px-Rasagola.jpg", t:"sw", ki:"Cottage cheese, sugar syrup, cardamom, rose water", city:"Salepur", yr:"1868"}]},
 
   "Punjab":            { cap:"Chandigarh",         color:"#ef9a9a", dishes:[
 
-    {n:"Butter Chicken",  e:"🍗", img:W_IMG+"4/45/Butter_chicken.jpg/240px-Butter_chicken.jpg"},
+    {n:"Butter Chicken",  e:"🍗", img:W_IMG+"4/45/Butter_chicken.jpg/240px-Butter_chicken.jpg", t:"sp", ki:"Chicken, tomato, butter, cream, garam masala", city:"Amritsar", yr:"1948"},
 
-    {n:"Sarson da Saag",  e:"🫓", img:W_IMG+"5/5e/Sarson_da_saag.jpg/240px-Sarson_da_saag.jpg"},
+    {n:"Sarson da Saag",  e:"🫓", img:W_IMG+"5/5e/Sarson_da_saag.jpg/240px-Sarson_da_saag.jpg", t:"sv", ki:"Mustard greens, spinach, makki flour, ghee, garlic", city:"Amritsar", yr:"~1500s"},
 
-    {n:"Amritsari Kulcha",e:"🫓", img:W_IMG+"a/a3/Amritsari_kulcha.jpg/240px-Amritsari_kulcha.jpg"},
+    {n:"Amritsari Kulcha",e:"🫓", img:W_IMG+"a/a3/Amritsari_kulcha.jpg/240px-Amritsari_kulcha.jpg", t:"sv", ki:"Maida, potato, onion, coriander, butter", city:"Amritsar", yr:"~1800s"},
 
-    {n:"Lassi",           e:"🥛", img:W_IMG+"6/6e/Lassi.jpg/240px-Lassi.jpg"}]},
+    {n:"Lassi",           e:"🥛", img:W_IMG+"6/6e/Lassi.jpg/240px-Lassi.jpg", t:"sw", ki:"Yogurt, water, sugar/salt, cardamom, rose water", city:"Amritsar", yr:"~1000 CE"}]},
 
   "Rajasthan":         { cap:"Jaipur",             color:"#ffab40", dishes:[
 
-    {n:"Dal Baati Churma",e:"🍲", img:W_IMG+"d/d3/Dal_baati_churma.jpg/240px-Dal_baati_churma.jpg"},
+    {n:"Dal Baati Churma",e:"🍲", img:W_IMG+"d/d3/Dal_baati_churma.jpg/240px-Dal_baati_churma.jpg", t:"sv", ki:"Wheat flour, toor dal, ghee, jaggery, spices", city:"Jaipur", yr:"~1000 CE"},
 
-    {n:"Laal Maas",       e:"🍖", img:W_IMG+"5/5e/Laal_maas.jpg/240px-Laal_maas.jpg"},
+    {n:"Laal Maas",       e:"🍖", img:W_IMG+"5/5e/Laal_maas.jpg/240px-Laal_maas.jpg", t:"sp", ki:"Mutton, red chilli, yogurt, garlic, spices", city:"Jaipur", yr:"~1700s"},
 
-    {n:"Ghevar",          e:"🍰", img:W_IMG+"a/a3/Ghevar.jpg/240px-Ghevar.jpg"},
+    {n:"Ghevar",          e:"🍰", img:W_IMG+"a/a3/Ghevar.jpg/240px-Ghevar.jpg", t:"sw", ki:"Maida, ghee, sugar syrup, cardamom, dry fruits", city:"Jaipur", yr:"~1500s"},
 
-    {n:"Ker Sangri",      e:"🥗", img:W_IMG+"a/a0/Ker_sangri.jpg/240px-Ker_sangri.jpg"}]},
+    {n:"Ker Sangri",      e:"🥗", img:W_IMG+"a/a0/Ker_sangri.jpg/240px-Ker_sangri.jpg", t:"sv", ki:"Ker berries, sangri beans, dry red chilli, mustard oil", city:"Jodhpur", yr:"~1700s"}]},
 
   "Sikkim":            { cap:"Gangtok",            color:"#b39ddb", dishes:[
 
-    {n:"Momos",           e:"🥟", img:W_IMG+"3/3e/Momo_(food).jpg/240px-Momo_(food).jpg"},
+    {n:"Momos",           e:"🥟", img:W_IMG+"3/3e/Momo_(food).jpg/240px-Momo_(food).jpg", t:"sv", ki:"Flour, minced meat/vegetables, ginger, garlic, cabbage", city:"Gangtok", yr:"~1400s"},
 
-    {n:"Thukpa",          e:"🍜", img:W_IMG+"6/6b/Thukpa.jpg/240px-Thukpa.jpg"},
+    {n:"Sel Roti",          e:"🍩", img:W_IMG+"6/6b/Thukpa.jpg/240px-Thukpa.jpg", t:"sw", ki:"Rice flour, sugar, ghee, cardamom, oil", city:"Gangtok", yr:"~1800s"},
 
-    {n:"Gundruk",         e:"🥬", img:W_IMG+"a/a3/Gundruk.jpg/240px-Gundruk.jpg"},
+    {n:"Gundruk",         e:"🥬", img:W_IMG+"a/a3/Gundruk.jpg/240px-Gundruk.jpg", t:"sp", ki:"Fermented leafy greens, chilli, garlic, oil", city:"Gangtok", yr:"~1700s"},
 
-    {n:"Chhurpi Soup",    e:"🍵", img:W_IMG+"b/b3/Chhurpi.jpg/240px-Chhurpi.jpg"}]},
+    {n:"Chhurpi Soup",    e:"🍵", img:W_IMG+"b/b3/Chhurpi.jpg/240px-Chhurpi.jpg", t:"sv", ki:"Hard yak cheese, vegetables, chilli, ginger", city:"Namchi", yr:"Ancient"}]},
 
   "Tamil Nadu":        { cap:"Chennai",            color:"#f44336", dishes:[
 
-    {n:"Idli Sambar",     e:"🍚", img:W_IMG+"6/6e/Idli_sambar.jpg/240px-Idli_sambar.jpg"},
+    {n:"Idli Sambar",     e:"🍚", img:W_IMG+"6/6e/Idli_sambar.jpg/240px-Idli_sambar.jpg", t:"sv", ki:"Rice, urad dal, toor dal, tamarind, vegetables", city:"Chennai", yr:"~800 CE"},
 
-    {n:"Chettinad Chicken",e:"🍗",img:W_IMG+"5/5e/Chettinad_chicken.jpg/240px-Chettinad_chicken.jpg"},
+    {n:"Chettinad Chicken",e:"🍗",img:W_IMG+"5/5e/Chettinad_chicken.jpg/240px-Chettinad_chicken.jpg", t:"sp", ki:"Chicken, kalpasi, marathi mokku, coconut, spices", city:"Karaikudi", yr:"~1900s"},
 
-    {n:"Pongal",          e:"🍚", img:W_IMG+"a/a3/Pongal_dish.jpg/240px-Pongal_dish.jpg"},
+    {n:"Pongal",          e:"🍚", img:W_IMG+"a/a3/Pongal_dish.jpg/240px-Pongal_dish.jpg", t:"sv", ki:"Rice, moong dal, ghee, pepper, cumin, cashews", city:"Chennai", yr:"~1000 CE"},
 
-    {n:"Murukku",         e:"🌀", img:W_IMG+"b/b3/Murukku.jpg/240px-Murukku.jpg"}]},
+    {n:"Murukku",         e:"🌀", img:W_IMG+"b/b3/Murukku.jpg/240px-Murukku.jpg", t:"sv", ki:"Rice flour, urad dal, sesame, cumin, butter", city:"Madurai", yr:"~1000 CE"}]},
 
   "Telangana":         { cap:"Hyderabad",          color:"#26a69a", dishes:[
 
-    {n:"Hyderabadi Biryani",e:"🍚",img:W_IMG+"a/a3/Hyderabadi_biryani.jpg/240px-Hyderabadi_biryani.jpg"},
+    {n:"Hyderabadi Biryani",e:"🍚",img:W_IMG+"a/a3/Hyderabadi_biryani.jpg/240px-Hyderabadi_biryani.jpg", t:"sp", ki:"Basmati rice, mutton, saffron, fried onion, spices", city:"Hyderabad", yr:"~1600s"},
 
-    {n:"Haleem",          e:"🍲", img:W_IMG+"5/5e/Haleem.jpg/240px-Haleem.jpg"},
+    {n:"Haleem",          e:"🍲", img:W_IMG+"5/5e/Haleem.jpg/240px-Haleem.jpg", t:"sv", ki:"Wheat, mutton, lentils, ginger, fried onion", city:"Hyderabad", yr:"~1600s"},
 
-    {n:"Sarva Pindi",     e:"🥞", img:W_IMG+"b/b3/Sarva_pindi.jpg/240px-Sarva_pindi.jpg"},
+    {n:"Sarva Pindi",     e:"🥞", img:W_IMG+"b/b3/Sarva_pindi.jpg/240px-Sarva_pindi.jpg", t:"sv", ki:"Rice flour, chana dal, sesame, chilli, curry leaves", city:"Hyderabad", yr:"~1800s"},
 
-    {n:"Qubani ka Meetha",e:"🍮", img:W_IMG+"a/a3/Qubani_ka_meetha.jpg/240px-Qubani_ka_meetha.jpg"}]},
+    {n:"Qubani ka Meetha",e:"🍮", img:W_IMG+"a/a3/Qubani_ka_meetha.jpg/240px-Qubani_ka_meetha.jpg", t:"sw", ki:"Dried apricots, sugar, cream, almonds", city:"Hyderabad", yr:"~1600s"}]},
 
   "Tripura":           { cap:"Agartala",           color:"#66bb6a", dishes:[
 
-    {n:"Mui Borok",       e:"🍲", img:W_IMG+"e/e3/Mui_borok.jpg/240px-Mui_borok.jpg"},
+    {n:"Mui Borok",       e:"🍲", img:W_IMG+"e/e3/Mui_borok.jpg/240px-Mui_borok.jpg", t:"sp", ki:"Fish, vegetables, fermented bamboo shoot, chilli", city:"Agartala", yr:"~1700s"},
 
-    {n:"Chakhwi",         e:"🍖", img:W_IMG+"5/5e/Chakhwi.jpg/240px-Chakhwi.jpg"},
+    {n:"Chakhwi",         e:"🍖", img:W_IMG+"5/5e/Chakhwi.jpg/240px-Chakhwi.jpg", t:"sp", ki:"Pork/chicken, bamboo shoot, chilli, ginger", city:"Agartala", yr:"~1800s"},
 
-    {n:"Wahan Mosdeng",   e:"🌶️",img:W_IMG+"a/a3/Wahan_mosdeng.jpg/240px-Wahan_mosdeng.jpg"}]},
+    {n:"Wahan Mosdeng",   e:"🌶️",img:W_IMG+"a/a3/Wahan_mosdeng.jpg/240px-Wahan_mosdeng.jpg", t:"sp", ki:"Pork, chilli, ginger, garlic, onion", city:"Agartala", yr:"~1800s"}]},
 
   "Uttar Pradesh":     { cap:"Lucknow",            color:"#42a5f5", dishes:[
 
-    {n:"Lucknowi Biryani",e:"🍚", img:W_IMG+"a/a3/Lucknowi_biryani.jpg/240px-Lucknowi_biryani.jpg"},
+    {n:"Lucknowi Biryani",e:"🍚", img:W_IMG+"a/a3/Lucknowi_biryani.jpg/240px-Lucknowi_biryani.jpg", t:"sv", ki:"Basmati rice, mutton, saffron, kewra, dum spices", city:"Lucknow", yr:"~1700s"},
 
-    {n:"Tunday Kababi",   e:"🍢", img:W_IMG+"5/5e/Tunday_kababi.jpg/240px-Tunday_kababi.jpg"},
+    {n:"Tunday Kababi",   e:"🍢", img:W_IMG+"5/5e/Tunday_kababi.jpg/240px-Tunday_kababi.jpg", t:"sv", ki:"Minced mutton, 160 spices, papaya, ghee", city:"Lucknow", yr:"1905"},
 
-    {n:"Petha",           e:"🍬", img:W_IMG+"b/b3/Petha_sweet.jpg/240px-Petha_sweet.jpg"},
+    {n:"Petha",           e:"🍬", img:W_IMG+"b/b3/Petha_sweet.jpg/240px-Petha_sweet.jpg", t:"sw", ki:"Ash gourd, sugar, lime, cardamom, rose water", city:"Agra", yr:"~1600s"},
 
-    {n:"Bedai Sabzi",     e:"🥘", img:W_IMG+"a/a3/Bedai.jpg/240px-Bedai.jpg"}]},
+    {n:"Bedai Sabzi",     e:"🥘", img:W_IMG+"a/a3/Bedai.jpg/240px-Bedai.jpg", t:"sv", ki:"Urad dal, wheat flour, potato, spices, oil", city:"Varanasi", yr:"~1800s"}]},
 
   "Uttarakhand":       { cap:"Dehradun",           color:"#26c6da", dishes:[
 
-    {n:"Kafuli",          e:"🥬", img:W_IMG+"e/e3/Kafuli.jpg/240px-Kafuli.jpg"},
+    {n:"Kafuli",          e:"🥬", img:W_IMG+"e/e3/Kafuli.jpg/240px-Kafuli.jpg", t:"sv", ki:"Spinach, fenugreek, rice flour, garlic, ghee", city:"Pauri Garhwal", yr:"~1700s"},
 
-    {n:"Aloo Ke Gutke",   e:"🥔", img:W_IMG+"5/5e/Aloo_ke_gutke.jpg/240px-Aloo_ke_gutke.jpg"},
+    {n:"Aloo Ke Gutke",   e:"🥔", img:W_IMG+"5/5e/Aloo_ke_gutke.jpg/240px-Aloo_ke_gutke.jpg", t:"sp", ki:"Potato, mustard seeds, red chilli, coriander, oil", city:"Almora", yr:"~1800s"},
 
-    {n:"Bal Mithai",      e:"🍫", img:W_IMG+"a/a3/Bal_mithai.jpg/240px-Bal_mithai.jpg"},
+    {n:"Bal Mithai",      e:"🍫", img:W_IMG+"a/a3/Bal_mithai.jpg/240px-Bal_mithai.jpg", t:"sw", ki:"Khoya, sugar, white sugar balls, cardamom", city:"Almora", yr:"~1900s"},
 
-    {n:"Chainsoo",        e:"🍲", img:W_IMG+"b/b3/Chainsoo.jpg/240px-Chainsoo.jpg"}]},
+    {n:"Chainsoo",        e:"🍲", img:W_IMG+"b/b3/Chainsoo.jpg/240px-Chainsoo.jpg", t:"sv", ki:"Black gram dal, ghee, garlic, red chilli, asafoetida", city:"Pauri Garhwal", yr:"~1700s"}]},
 
   "West Bengal":       { cap:"Kolkata",            color:"#ec407a", dishes:[
 
-    {n:"Rosogolla",       e:"🍡", img:W_IMG+"a/a3/Rasgulla.jpg/240px-Rasgulla.jpg"},
+    {n:"Rosogolla",       e:"🍡", img:W_IMG+"a/a3/Rasgulla.jpg/240px-Rasgulla.jpg", t:"sw", ki:"Cottage cheese, sugar syrup, cardamom, rose water", city:"Kolkata", yr:"1868"},
 
-    {n:"Macher Jhol",     e:"🐟", img:W_IMG+"5/5e/Macher_jhol.jpg/240px-Macher_jhol.jpg"},
+    {n:"Macher Jhol",     e:"🐟", img:W_IMG+"5/5e/Macher_jhol.jpg/240px-Macher_jhol.jpg", t:"sv", ki:"Fish, potato, tomato, turmeric, mustard oil", city:"Kolkata", yr:"~1500s"},
 
-    {n:"Kosha Mangsho",   e:"🍖", img:W_IMG+"b/b3/Kosha_mangsho.jpg/240px-Kosha_mangsho.jpg"},
+    {n:"Kosha Mangsho",   e:"🍖", img:W_IMG+"b/b3/Kosha_mangsho.jpg/240px-Kosha_mangsho.jpg", t:"sp", ki:"Mutton, onion, yogurt, garam masala, mustard oil", city:"Kolkata", yr:"~1800s"},
 
-    {n:"Mishti Doi",      e:"🍮", img:W_IMG+"a/a3/Mishti_doi.jpg/240px-Mishti_doi.jpg"}]},
+    {n:"Mishti Doi",      e:"🍮", img:W_IMG+"a/a3/Mishti_doi.jpg/240px-Mishti_doi.jpg", t:"sw", ki:"Milk, sugar, yogurt culture, cardamom", city:"Kolkata", yr:"~1800s"}]},
 
   "Jammu and Kashmir": { cap:"Srinagar / Jammu",   color:"#5c6bc0", dishes:[
 
-    {n:"Rogan Josh",      e:"🍖", img:W_IMG+"5/5e/Rogan_josh.jpg/240px-Rogan_josh.jpg"},
+    {n:"Rogan Josh",      e:"🍖", img:W_IMG+"5/5e/Rogan_josh.jpg/240px-Rogan_josh.jpg", t:"sp", ki:"Mutton, Kashmiri red chilli, fennel, yogurt, ghee", city:"Srinagar", yr:"~1600s"},
 
-    {n:"Yakhni",          e:"🍲", img:W_IMG+"a/a3/Yakhni.jpg/240px-Yakhni.jpg"},
+    {n:"Yakhni",          e:"🍲", img:W_IMG+"a/a3/Yakhni.jpg/240px-Yakhni.jpg", t:"sv", ki:"Mutton, yogurt, fennel, cardamom, cloves", city:"Srinagar", yr:"~1600s"},
 
-    {n:"Dum Aloo",        e:"🥔", img:W_IMG+"b/b3/Dum_aloo.jpg/240px-Dum_aloo.jpg"},
+    {n:"Dum Aloo",        e:"🥔", img:W_IMG+"b/b3/Dum_aloo.jpg/240px-Dum_aloo.jpg", t:"sp", ki:"Baby potatoes, yogurt, Kashmiri chilli, fennel, ghee", city:"Srinagar", yr:"~1700s"},
 
-    {n:"Sheer Chai",      e:"🍵", img:W_IMG+"6/6e/Sheer_chai.jpg/240px-Sheer_chai.jpg"}]},
+    {n:"Sheer Chai",      e:"🍵", img:W_IMG+"6/6e/Sheer_chai.jpg/240px-Sheer_chai.jpg", t:"sv", ki:"Green tea, milk, salt, baking soda, cardamom", city:"Srinagar", yr:"~1500s"}]},
 
   "Ladakh":            { cap:"Leh",                color:"#8d6e63", dishes:[
 
-    {n:"Thukpa",          e:"🍜", img:W_IMG+"6/6b/Thukpa.jpg/240px-Thukpa.jpg"},
+    {n:"Thukpa",          e:"🍜", img:"", t:"sv", ki:"Noodles, vegetables, meat, ginger, garlic", city:"Tawang", yr:"~1400s"},
 
-    {n:"Skyu",            e:"🍲", img:W_IMG+"a/a3/Skyu.jpg/240px-Skyu.jpg"},
+    {n:"Butter Tea",      e:"🍵", img:"", t:"sv", ki:"Tea leaves, yak butter, salt, milk", city:"Leh", yr:"~1400s"},
 
-    {n:"Tsampa",          e:"🌾", img:W_IMG+"b/b3/Tsampa.jpg/240px-Tsampa.jpg"}]},
+    {n:"Tingmo",          e:"🥐", img:"", t:"sv", ki:"Wheat flour, yeast, water, salt", city:"Leh", yr:"~1500s"}]},
 
   "Delhi":             { cap:"New Delhi",          color:"#ab47bc", dishes:[
 
-    {n:"Chole Bhature",   e:"🍛", img:W_IMG+"5/5e/Chole_bhature.jpg/240px-Chole_bhature.jpg"},
+    {n:"Chole Bhature",   e:"🍛", img:W_IMG+"5/5e/Chole_bhature.jpg/240px-Chole_bhature.jpg", t:"sp", ki:"Chickpeas, maida, yogurt, spices, oil", city:"Chandni Chowk, Delhi", yr:"~1940s"},
 
-    {n:"Butter Chicken",  e:"🍗", img:W_IMG+"4/45/Butter_chicken.jpg/240px-Butter_chicken.jpg"},
+    {n:"Nihari",          e:"🍲", img:W_IMG+"a/a3/Nihari.jpg/240px-Nihari.jpg", t:"sp", ki:"Mutton shank, wheat flour, ginger, spices, ghee", city:"Jama Masjid, Delhi", yr:"~1700s"},
 
-    {n:"Paranthe Wali Gali Paratha",e:"🫓",img:W_IMG+"a/a3/Paratha.jpg/240px-Paratha.jpg"},
+    {n:"Paranthe Wali Gali Paratha",e:"🫓",img:W_IMG+"a/a3/Paratha.jpg/240px-Paratha.jpg", t:"sv", ki:"Wheat flour, potato/paneer, ghee, spices", city:"Chandni Chowk, Delhi", yr:"~1870s"},
 
-    {n:"Jalebi",          e:"🍩", img:W_IMG+"3/3e/Jalebi.jpg/240px-Jalebi.jpg"}]},
+    {n:"Jalebi",          e:"🍩", img:W_IMG+"3/3e/Jalebi.jpg/240px-Jalebi.jpg", t:"sw", ki:"Maida, yogurt, sugar syrup, saffron, ghee", city:"Old Delhi", yr:"~1450 CE"}]},
 
   "Andaman and Nicobar Islands":{ cap:"Port Blair", color:"#00acc1", dishes:[
 
-    {n:"Grilled Lobster", e:"🦞", img:W_IMG+"a/a3/Grilled_lobster.jpg/240px-Grilled_lobster.jpg"},
+    {n:"Grilled Lobster", e:"🦞", img:W_IMG+"a/a3/Grilled_lobster.jpg/240px-Grilled_lobster.jpg", t:"sv", ki:"Lobster, butter, garlic, lemon, herbs", city:"Port Blair", yr:"~1900s"},
 
-    {n:"Fish Curry",      e:"🐟", img:W_IMG+"6/6e/Kerala_fish_curry.jpg/240px-Kerala_fish_curry.jpg"},
+    {n:"Fish Curry",      e:"🐟", img:W_IMG+"6/6e/Kerala_fish_curry.jpg/240px-Kerala_fish_curry.jpg", t:"sp", ki:"Fish, coconut milk, tamarind, chilli, turmeric", city:"Port Blair", yr:"~1800s"},
 
-    {n:"Coconut Prawn Curry",e:"🦐",img:W_IMG+"5/5e/Prawn_curry.jpg/240px-Prawn_curry.jpg"}]},
+    {n:"Coconut Prawn Curry",e:"🦐",img:W_IMG+"5/5e/Prawn_curry.jpg/240px-Prawn_curry.jpg", t:"sp", ki:"Prawns, coconut milk, mustard seeds, curry leaves", city:"Havelock Island", yr:"~1900s"}]},
 
   "Chandigarh":        { cap:"Chandigarh",         color:"#78909c", dishes:[
 
-    {n:"Chole Bhature",   e:"🍛", img:W_IMG+"5/5e/Chole_bhature.jpg/240px-Chole_bhature.jpg"},
+    {n:"Pinni",           e:"🍮", img:W_IMG+"a/a3/Pinni_sweet.jpg/240px-Pinni_sweet.jpg", t:"sw", ki:"Wheat flour, ghee, jaggery, dry fruits, cardamom", city:"Chandigarh", yr:"~1800s"},
 
-    {n:"Butter Chicken",  e:"🍗", img:W_IMG+"4/45/Butter_chicken.jpg/240px-Butter_chicken.jpg"},
+    {n:"Makki di Roti",   e:"🫓", img:W_IMG+"5/5e/Makki_di_roti.jpg/240px-Makki_di_roti.jpg", t:"sv", ki:"Maize flour, water, salt, ghee", city:"Chandigarh", yr:"~1500s"},
 
-    {n:"Lassi",           e:"🥛", img:W_IMG+"6/6e/Lassi.jpg/240px-Lassi.jpg"}]},
+    {n:"Gur ka Halwa",    e:"🍯", img:W_IMG+"b/b3/Gur_halwa.jpg/240px-Gur_halwa.jpg", t:"sw", ki:"Wheat flour, jaggery, ghee, cardamom, dry fruits", city:"Chandigarh", yr:"~1700s"}]},
 
   "Puducherry":        { cap:"Puducherry",         color:"#ff7043", dishes:[
 
-    {n:"Bouillabaisse",   e:"🍲", img:W_IMG+"a/a3/Bouillabaisse.jpg/240px-Bouillabaisse.jpg"},
+    {n:"Bouillabaisse",   e:"🍲", img:W_IMG+"a/a3/Bouillabaisse.jpg/240px-Bouillabaisse.jpg", t:"sv", ki:"Fish, shellfish, tomato, saffron, fennel, olive oil", city:"Puducherry", yr:"~1800s"},
 
-    {n:"Crepes",          e:"🥞", img:W_IMG+"5/5e/Crepes.jpg/240px-Crepes.jpg"},
+    {n:"Crepes",          e:"🥞", img:W_IMG+"5/5e/Crepes.jpg/240px-Crepes.jpg", t:"sw", ki:"Maida, eggs, milk, butter, sugar", city:"Puducherry", yr:"~1800s"},
 
-    {n:"Pondicherry Fish Curry",e:"🐟",img:W_IMG+"6/6e/Kerala_fish_curry.jpg/240px-Kerala_fish_curry.jpg"}]},
+    {n:"Pondicherry Fish Curry",e:"🐟",img:W_IMG+"6/6e/Kerala_fish_curry.jpg/240px-Kerala_fish_curry.jpg", t:"sp", ki:"Fish, coconut milk, tamarind, chilli, curry leaves", city:"Puducherry", yr:"~1700s"}]},
 
   "Lakshadweep":       { cap:"Kavaratti",          color:"#29b6f6", dishes:[
 
-    {n:"Tuna Curry",      e:"🐟", img:W_IMG+"a/a3/Tuna_curry.jpg/240px-Tuna_curry.jpg"},
+    {n:"Tuna Curry",      e:"🐟", img:W_IMG+"a/a3/Tuna_curry.jpg/240px-Tuna_curry.jpg", t:"sp", ki:"Tuna, coconut milk, chilli, curry leaves, turmeric", city:"Kavaratti", yr:"~1800s"},
 
-    {n:"Kallummakkaya",   e:"🦪", img:W_IMG+"5/5e/Kallummakkaya.jpg/240px-Kallummakkaya.jpg"},
+    {n:"Kallummakkaya",   e:"🦪", img:W_IMG+"5/5e/Kallummakkaya.jpg/240px-Kallummakkaya.jpg", t:"sv", ki:"Mussels, coconut, chilli, ginger, garlic", city:"Kavaratti", yr:"~1700s"},
 
-    {n:"Coconut Rice",    e:"🍚", img:W_IMG+"b/b3/Coconut_rice.jpg/240px-Coconut_rice.jpg"}]},
+    {n:"Coconut Rice",    e:"🍚", img:W_IMG+"b/b3/Coconut_rice.jpg/240px-Coconut_rice.jpg", t:"sv", ki:"Rice, coconut, mustard seeds, curry leaves, cashews", city:"Kavaratti", yr:"Ancient"}]},
 
   "Dadra and Nagar Haveli and Daman and Diu":{ cap:"Daman", color:"#9ccc65", dishes:[
 
-    {n:"Patoleo",         e:"🍃", img:W_IMG+"a/a3/Patoleo.jpg/240px-Patoleo.jpg"},
+    {n:"Patoleo",         e:"🍃", img:W_IMG+"a/a3/Patoleo.jpg/240px-Patoleo.jpg", t:"sw", ki:"Rice flour, turmeric leaf, coconut, jaggery, cardamom", city:"Daman", yr:"~1600s"},
 
-    {n:"Seafood Curry",   e:"🦐", img:W_IMG+"5/5e/Prawn_curry.jpg/240px-Prawn_curry.jpg"},
+    {n:"Seafood Curry",   e:"🦐", img:W_IMG+"5/5e/Prawn_curry.jpg/240px-Prawn_curry.jpg", t:"sp", ki:"Mixed seafood, coconut milk, chilli, tamarind, spices", city:"Diu", yr:"~1800s"},
 
-    {n:"Bebinca",         e:"🍮", img:W_IMG+"8/8e/Bebinca.jpg/240px-Bebinca.jpg"}]},
+    {n:"Ubadiyu",         e:"🥘", img:W_IMG+"8/8e/Bebinca.jpg/240px-Bebinca.jpg", t:"sv", ki:"Mixed vegetables, coconut, fenugreek, spices, oil", city:"Silvassa", yr:"~1800s"}]},
 
 };
 
@@ -486,20 +708,11 @@ const FOOD = {
 
 (async () => {
 
-  const W = Math.min(540, window.innerWidth - 32);
-
+  const W = Math.min(720, window.innerWidth - 32);
   const H = Math.round(W * 1.18);
 
   const wrap    = document.getElementById("map-wrap");
-
   const loading = document.getElementById("loading");
-
-  const overlay = document.getElementById("overlay");
-
-  const content = document.getElementById("popup-content");
-
-  const closeBtn= document.getElementById("close-btn");
-
   const tip     = document.getElementById("tip");
 
 
@@ -551,43 +764,247 @@ const FOOD = {
     .style("fill", d => (FOOD[d.properties.st_nm] || {}).color || "#90caf9")
 
     .on("mouseenter", function(event, d) {
-
       tip.textContent = d.properties.st_nm;
-
       tip.style.opacity = "1";
-
     })
-
     .on("mousemove", function(event) {
-
       tip.style.left = (event.clientX + 14) + "px";
-
       tip.style.top  = (event.clientY - 30) + "px";
-
     })
-
     .on("mouseleave", function() {
-
       tip.style.opacity = "0";
-
     })
-
     .on("click", function(event, d) {
-
       d3.selectAll(".state.active").classed("active", false);
-
       d3.select(this).classed("active", true);
-
-      openPopup(d.properties.st_nm);
-
+      showSidePanel(d.properties.st_nm);
     });
 
 
 
-  // Fetch Wikipedia thumbnail for a dish name, fall back to emoji
+const DISH_IMAGES = {
+  // Andhra Pradesh — verified 330px Wikimedia URLs
+  "Pesarattu":         "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Pesarattu.jpg/330px-Pesarattu.jpg",
+  "Gongura Mutton":    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/A_famous_andhra_side_dish._Gongura_paccaDi.JPG/330px-A_famous_andhra_side_dish._Gongura_paccaDi.JPG",
+  "Pulihora":          "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Pulihara.JPG/330px-Pulihara.JPG",
+  "Bobbatlu":          "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Holige1.JPG/330px-Holige1.JPG",
+  // Tamil Nadu — verified 330px Wikimedia URLs
+  "Idli Sambar":       "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Idli_Sambar.JPG/330px-Idli_Sambar.JPG",
+  "Chettinad Chicken": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/ChickenChettinad.JPG/330px-ChickenChettinad.JPG",
+  "Pongal":            "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Ven_pongal_with_sambar_and_chutney.jpg/330px-Ven_pongal_with_sambar_and_chutney.jpg",
+  "Murukku":           "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/A_Traditional_Tamil_Snack_Murukku.jpg/330px-A_Traditional_Tamil_Snack_Murukku.jpg",
+  // Kerala — verified 330px Wikimedia URLs
+  "Appam & Stew":      "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Appam_-_%E0%AE%85%E0%AE%AA%E0%AF%8D%E0%AE%AA%E0%AE%AE%E0%AF%8D.jpg/330px-Appam_-_%E0%AE%85%E0%AE%AA%E0%AF%8D%E0%AE%AA%E0%AE%AE%E0%AF%8D.jpg",
+  "Kerala Fish Curry": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Meen_curry_2.JPG/330px-Meen_curry_2.JPG",
+  "Puttu & Kadala":    "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Puttu_%28Rice_Flour_steamed_cake%29.jpg/330px-Puttu_%28Rice_Flour_steamed_cake%29.jpg",
+  "Payasam":           "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Kheer.jpg/330px-Kheer.jpg",
+  // Karnataka — verified 330px Wikimedia URLs
+  "Bisi Bele Bath":    "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Bisi_Bele_Bath_%28Bisibelebath%29.JPG/330px-Bisi_Bele_Bath_%28Bisibelebath%29.JPG",
+  "Masala Dosa":       "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Rameshwaram_Cafe_Dosa.jpg/330px-Rameshwaram_Cafe_Dosa.jpg",
+  "Ragi Mudde":        "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/RAGI_MUDDE.JPG/330px-RAGI_MUDDE.JPG",
+  "Mysore Pak":        "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Mysore_pak.jpg/330px-Mysore_pak.jpg",
+  // Telangana — verified 330px Wikimedia URLs
+  "Hyderabadi Biryani":"https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Hyderabadi_Chicken_Biryani.jpg/330px-Hyderabadi_Chicken_Biryani.jpg",
+  "Haleem":            "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Pakistani_Haleem_served_with_garnish.jpg/330px-Pakistani_Haleem_served_with_garnish.jpg",
+  "Sarva Pindi":       "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Sarvapindi_%2C_mango_pickle_-_aavakai.jpg/330px-Sarvapindi_%2C_mango_pickle_-_aavakai.jpg",
+  "Qubani ka Meetha":  "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Khobani_Ka_Meetha.JPG/330px-Khobani_Ka_Meetha.JPG",
+  // Goa — verified 330px Wikimedia URLs
+  "Fish Curry Rice":   "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Fish-curry-rice%2C_Goan-style_02.jpg/330px-Fish-curry-rice%2C_Goan-style_02.jpg",
+  "Prawn Balchão":     "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Prawns_Balchao.jpg/330px-Prawns_Balchao.jpg",
+  "Bebinca":           "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Bebinca_com_gelado.jpg/330px-Bebinca_com_gelado.jpg",
+  "Vindaloo":          "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Beef_Vindaloo_-_Chilli_Mama%2C_Chadstone_%283014236693%29.jpg/330px-Beef_Vindaloo_-_Chilli_Mama%2C_Chadstone_%283014236693%29.jpg",
+  // Maharashtra — verified 330px Wikimedia URLs
+  "Vada Pav":          "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Vada_Pav-Indian_street_food.JPG/330px-Vada_Pav-Indian_street_food.JPG",
+  "Puran Poli":        "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Holige1.JPG/330px-Holige1.JPG",
+  "Misal Pav":         "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Kolhapuri_Misal_Pav.jpg/330px-Kolhapuri_Misal_Pav.jpg",
+  "Modak":             "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Ukadiche_Modak_%28Rice%29.jpg/330px-Ukadiche_Modak_%28Rice%29.jpg",
+  // Odisha — verified 330px Wikimedia URLs
+  "Dalma":             "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Dalma%28dish%29.jpg/330px-Dalma%28dish%29.jpg",
+  "Pakhala Bhata":     "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Pakhala_01.jpg/330px-Pakhala_01.jpg",
+  "Chhena Poda":       "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Bhubaneswar_Odia_Meetup_2013Jan29-23.JPG/330px-Bhubaneswar_Odia_Meetup_2013Jan29-23.JPG",
+  "Rasagola":          "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Rasgulla.jpg/330px-Rasgulla.jpg",
+  // Chhattisgarh — verified 330px Wikimedia URLs
+  "Chila":             "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Mini_Uttappam.jpg/330px-Mini_Uttappam.jpg",
+  "Bafauri":           "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Onion_pakora_-_a.jpg/330px-Onion_pakora_-_a.jpg",
+  "Muthia":            "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Gujrati_Muthia.jpg/330px-Gujrati_Muthia.jpg",
+  "Fara":              "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Ukadiche_Modak_%28Rice%29.jpg/330px-Ukadiche_Modak_%28Rice%29.jpg",
+  // Madhya Pradesh — verified 330px Wikimedia URLs
+  "Dal Bafla":         "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/DalBati.jpg/330px-DalBati.jpg",
+  "Poha":              "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Poha_4.jpg/330px-Poha_4.jpg",
+  "Bhutte ka Kees":    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Pudding_Corn.jpg/330px-Pudding_Corn.jpg",
+  "Malpua":            "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Malpoa_pitha.jpg/330px-Malpoa_pitha.jpg",
+  // Gujarat — verified 330px Wikimedia URLs
+  "Dhokla":            "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Dhokla_on_Gujrart.jpg/330px-Dhokla_on_Gujrart.jpg",
+  "Thepla":            "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Thepla_main.jpg/330px-Thepla_main.jpg",
+  "Undhiyu":           "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Undhiyu.jpg/330px-Undhiyu.jpg",
+  "Fafda-Jalebi":      "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Fafda_Jalebi_at_Surat.png/330px-Fafda_Jalebi_at_Surat.png",
+  // Rajasthan — verified Wikimedia URLs
+  "Dal Baati Churma":  "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Dal_Baati_Churma.jpg/330px-Dal_Baati_Churma.jpg",
+  "Laal Maas":         "https://upload.wikimedia.org/wikipedia/commons/9/97/Laal-Maans.jpg",
+  "Ghevar":            "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Ghevar_with_Malai_Topping.jpg/330px-Ghevar_with_Malai_Topping.jpg",
+  "Ker Sangri":        "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Ker_Sangri.jpg/330px-Ker_Sangri.jpg",
+  // Jharkhand — verified 330px Wikimedia URLs
+  "Dhuska":            "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Dhuska.jpg/330px-Dhuska.jpg",
+  "Rugra":             "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Natural_Edible_mushroom_curry_%28YS%29.JPG/330px-Natural_Edible_mushroom_curry_%28YS%29.JPG",
+  "Handia":            "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Handia.jpg/330px-Handia.jpg",
+  "Pittha":            "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Pitha_for_Wedding-_Pakan%2C_Patishapta%2C_Bharandash.jpg/330px-Pitha_for_Wedding-_Pakan%2C_Patishapta%2C_Bharandash.jpg",
+  // West Bengal — verified 330px Wikimedia URLs
+  "Rosogolla":         "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Rasgulla.jpg/330px-Rasgulla.jpg",
+  "Macher Jhol":       "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Tangra_macher_jhol%2C_cuisine_of_West_Bengal_20200426133600.jpg/330px-Tangra_macher_jhol%2C_cuisine_of_West_Bengal_20200426133600.jpg",
+  "Kosha Mangsho":     "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Bengali_Mutton_Curry.JPG/330px-Bengali_Mutton_Curry.JPG",
+  "Mishti Doi":        "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Mishti_Doi.jpg/330px-Mishti_Doi.jpg",
+  // Uttar Pradesh — verified 330px Wikimedia URLs
+  "Lucknowi Biryani":  "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Lucknowi_Mutton_Matka_Dum_Biriyani.jpg/330px-Lucknowi_Mutton_Matka_Dum_Biriyani.jpg",
+  "Tunday Kababi":     "https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Tunday_Kebabs.jpg/330px-Tunday_Kebabs.jpg",
+  "Petha":             "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Petha-from-Agra.JPG/330px-Petha-from-Agra.JPG",
+  "Bedai Sabzi":       "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Bedai_and_Sabzi.JPG/330px-Bedai_and_Sabzi.JPG",
+  // Haryana — verified 330px Wikimedia URLs
+  "Bajra Khichdi":     "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Dall_Khichdi.jpg/330px-Dall_Khichdi.jpg",
+  "Kadhi Pakora":      "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Kadhi_Pakora.jpg/330px-Kadhi_Pakora.jpg",
+  "Churma":            "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Dal_bati_churma.jpg/330px-Dal_bati_churma.jpg",
+  "Singri ki Sabzi":   "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Ker_Sangri.jpg/330px-Ker_Sangri.jpg",
+  // Delhi — verified 330px Wikimedia URLs
+  "Chole Bhature":     "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Chole_Bhature_from_Nagpur.JPG/330px-Chole_Bhature_from_Nagpur.JPG",
+  "Nihari":            "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Nalli_Nihari_India.jpg/330px-Nalli_Nihari_India.jpg",
+  "Paranthe Wali Gali Paratha": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Triangle_paratha_%28cropped%29.JPG/330px-Triangle_paratha_%28cropped%29.JPG",
+  "Jalebi":            "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Jalebi.jpg/330px-Jalebi.jpg",
+  // Punjab — verified 330px Wikimedia URLs
+  "Butter Chicken":    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Butter_Chicken_%26_Butter_Naan_-_Home_-_Chandigarh_-_India_-_0006.jpg/330px-Butter_Chicken_%26_Butter_Naan_-_Home_-_Chandigarh_-_India_-_0006.jpg",
+  "Sarson da Saag":    "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Saagroti.jpg/330px-Saagroti.jpg",
+  "Amritsari Kulcha":  "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Chole_Kulcha_Meal_-_Order_Food_Online_in_Mumbai_%2831013272937%29.jpg/330px-Chole_Kulcha_Meal_-_Order_Food_Online_in_Mumbai_%2831013272937%29.jpg",
+  "Lassi":             "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Salt_lassi.jpg/330px-Salt_lassi.jpg",
+  // Uttarakhand — verified 330px Wikimedia URLs
+  "Kafuli":            "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Punjabi_Sarsoon_Ka_Saag.JPG/330px-Punjabi_Sarsoon_Ka_Saag.JPG",
+  "Aloo Ke Gutke":     "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Kashmiri_Dum_aloo.jpeg/330px-Kashmiri_Dum_aloo.jpeg",
+  "Bal Mithai":        "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Bal_mithai.jpg/330px-Bal_mithai.jpg",
+  "Chainsoo":          "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Punjabi_style_Dal_Makhani.jpg/330px-Punjabi_style_Dal_Makhani.jpg",
+  // Sikkim — verified 330px Wikimedia URLs
+  "Momos":             "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Momo_nepal.jpg/330px-Momo_nepal.jpg",
+  "Sel Roti":          "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Sel_Roti.jpg/330px-Sel_Roti.jpg",
+  "Gundruk":           "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Gundruk_NP.jpg/330px-Gundruk_NP.jpg",
+  "Chhurpi Soup":      "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Chhurpi_Nep.jpg/330px-Chhurpi_Nep.jpg",
+  // Bihar — verified 330px Wikimedia URLs
+  "Litti Chokha":      "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Litti_Chokha_2.jpg/330px-Litti_Chokha_2.jpg",
+  "Sattu Paratha":     "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Sattu_Paratha.jpg/330px-Sattu_Paratha.jpg",
+  "Thekua":            "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Thekua_-_Chhath_Festival_-_Kolkata_2013-11-09_4316.JPG/330px-Thekua_-_Chhath_Festival_-_Kolkata_2013-11-09_4316.JPG",
+  "Khaja":             "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Baleswari_khaja_pheni_Oriya_cuisine.jpg/330px-Baleswari_khaja_pheni_Oriya_cuisine.jpg",
+  // Meghalaya — verified 330px Wikimedia URLs
+  "Jadoh":             "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Jadoh.jpg/330px-Jadoh.jpg",
+  "Dohneiiong":        "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Bengali_Mutton_Curry.JPG/330px-Bengali_Mutton_Curry.JPG",
+  "Tungrymbai":        "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Soybean.USDA.jpg/330px-Soybean.USDA.jpg",
+  "Pumaloi":           "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Two_kinds_of_rice_flour.jpg/330px-Two_kinds_of_rice_flour.jpg",
+  // Assam — verified 330px Wikimedia URLs
+  "Masor Tenga":       "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Masor_Tenga.jpg/330px-Masor_Tenga.jpg",
+  "Pitha":             "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Bhapa_pitha.jpg/330px-Bhapa_pitha.jpg",
+  "Duck Curry":        "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Kerala_Duck_Curry.jpg/330px-Kerala_Duck_Curry.jpg",
+  "Khar":              "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Assamese_Thali.jpg/330px-Assamese_Thali.jpg",
+  // Arunachal Pradesh — verified 330px Wikimedia URLs
+  "Thukpa":            "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Thukpa%2C_Tibetan_noodle_in_Osaka%2C_Japan.jpg/330px-Thukpa%2C_Tibetan_noodle_in_Osaka%2C_Japan.jpg",
+  "Apong (Rice Beer)": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Nogin_Apong%2C_Lakhimpur.jpg/330px-Nogin_Apong%2C_Lakhimpur.jpg",
+  "Bamboo Shoot Fry":  "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Bamboo_sprout2.JPG/330px-Bamboo_sprout2.JPG",
+  // Himachal Pradesh — verified 330px Wikimedia URLs
+  "Dham":              "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/DHAM_AT_MATA_SHRI_NAINA_DEVI_TEMPLE.jpg/330px-DHAM_AT_MATA_SHRI_NAINA_DEVI_TEMPLE.jpg",
+  "Sidu":              "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Steaming_bread_in_Xi%27an%27s_Muslim_Quarter.jpg/330px-Steaming_bread_in_Xi%27an%27s_Muslim_Quarter.jpg",
+  "Chha Gosht":        "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Rogan_Josh_Kashmiri.jpg/330px-Rogan_Josh_Kashmiri.jpg",
+  "Babru":             "https://upload.wikimedia.org/wikipedia/en/d/d3/Babru_poster.jpg",
+  // Jammu & Kashmir — verified 330px Wikimedia URLs
+  "Rogan Josh":        "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Rogan_Josh_Kashmiri.jpg/330px-Rogan_Josh_Kashmiri.jpg",
+  "Yakhni":            "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Kashmiri_cuisine_waazwan.jpg/330px-Kashmiri_cuisine_waazwan.jpg",
+  "Dum Aloo":          "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Kashmiri_Dum_aloo.jpeg/330px-Kashmiri_Dum_aloo.jpeg",
+  "Sheer Chai":        "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/The_Great_Kashmiri_Salt_tea.png/330px-The_Great_Kashmiri_Salt_tea.png",
+  // Manipur — verified 330px Wikimedia URLs
+  "Eromba":            "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Yongchaak_eromba_%282%29.jpg/330px-Yongchaak_eromba_%282%29.jpg",
+  "Singju":            "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Yongchaak_Singju_with_Hawai_Maton.jpg/330px-Yongchaak_Singju_with_Hawai_Maton.jpg",
+  "Chamthong":         "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Chamthong_%28alias_Kangshoi_or_Kangsoi%29_dish_-_Traditional_Meitei_cuisine_-_Gastronomic_cultural_heritage_of_Manipur_%26_domestic_and_international_Meitei_diasporas.jpg/330px-thumbnail.jpg",
+  "Paknam":            "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Paknam.JPG/330px-Paknam.JPG",
+  // Mizoram — verified 330px Wikimedia URLs
+  "Bai":               "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Lamb-stew.jpg/330px-Lamb-stew.jpg",
+  "Vawksa Rep":        "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Schweinebauch-2.jpg/330px-Schweinebauch-2.jpg",
+  "Koat Pitha":        "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Pink_seolgitteok_cake.jpg/330px-Pink_seolgitteok_cake.jpg",
+  // Tripura — verified 330px Wikimedia URLs
+  "Mui Borok":         "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/A_women_serving_Tripuri_traditional_dishes.jpg/330px-A_women_serving_Tripuri_traditional_dishes.jpg",
+  "Chakhwi":           "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Chakhwi.jpg/330px-Chakhwi.jpg",
+  "Wahan Mosdeng":     "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Wahan_Mosdeng_and_Ruti-_Agartala-_Tripura.jpg/330px-Wahan_Mosdeng_and_Ruti-_Agartala-_Tripura.jpg",
+  // Nagaland — verified 330px Wikimedia URLs
+  "Smoked Pork & Bamboo Shoot": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Naga_style_smoked_Pork_ribs_with_bamboo_shoots_and_rice.jpg/330px-Naga_style_smoked_Pork_ribs_with_bamboo_shoots_and_rice.jpg",
+  "Axone":             "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Matsunoya_Breakfast_20240421_102843.jpg/330px-Matsunoya_Breakfast_20240421_102843.jpg",
+  "Galho":             "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Chinese_rice_congee.jpg/330px-Chinese_rice_congee.jpg",
+  // Puducherry — verified 330px Wikimedia URLs
+  "Bouillabaisse":     "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Bullabessa.jpg/330px-Bullabessa.jpg",
+  "Crepes":            "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Crepes_dsc07085.jpg/330px-Crepes_dsc07085.jpg",
+  "Pondicherry Fish Curry": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Meen_curry_2.JPG/330px-Meen_curry_2.JPG",
+  // Dadra & NH — verified 330px Wikimedia URLs
+  "Patoleo":           "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/GC_Steamed_Patoleo.jpg/330px-GC_Steamed_Patoleo.jpg",
+  "Seafood Curry":     "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Mixed_seafood_curry_with_rice.jpg/330px-Mixed_seafood_curry_with_rice.jpg",
+  "Ubadiyu":           "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Undhiyu.jpg/330px-Undhiyu.jpg",
+  // Andaman & Nicobar — verified 330px Wikimedia URLs
+  "Grilled Lobster":   "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/KreeftbijDenOsse.jpg/330px-KreeftbijDenOsse.jpg",
+  "Fish Curry":        "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/South_Indian_Fish_Curry_with_Steamed_Rice-Chennai-TamilNadu-DSC0001.jpg/330px-South_Indian_Fish_Curry_with_Steamed_Rice-Chennai-TamilNadu-DSC0001.jpg",
+  "Coconut Prawn Curry":"https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Prawn_Malai_Curry.jpg/330px-Prawn_Malai_Curry.jpg",
+  // Ladakh — verified 330px Wikimedia URLs
+  "Thukpa":            "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Thukpa%2C_Tibetan_noodle_in_Osaka%2C_Japan.jpg/330px-Thukpa%2C_Tibetan_noodle_in_Osaka%2C_Japan.jpg",
+  "Butter Tea":        "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Tibetan_butter_tea.jpg/330px-Tibetan_butter_tea.jpg",
+  "Tingmo":            "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Tingmo_or_Ting_Momo.JPG/330px-Tingmo_or_Ting_Momo.JPG",
+};
+
+  // Fetch image: use curated map first, then Wikipedia API, then emoji fallback
   async function loadWikiImg(imgEl, fallbackEl, dishName) {
+    // 1. Use curated image map
+    if (DISH_IMAGES[dishName]) {
+      imgEl.src = DISH_IMAGES[dishName];
+      imgEl.style.display = "block";
+      fallbackEl.style.display = "none";
+      imgEl.onerror = () => { imgEl.style.display = "none"; fallbackEl.style.display = "flex"; };
+      return;
+    }
+    // 2. Fall back to Wikipedia API
     try {
-      const slug = encodeURIComponent(dishName.replace(/ /g, "_"));
+      // Some dish names need a different Wikipedia article slug
+      const slugMap = {
+        "Chettinad Chicken": "Chettinad_cuisine",
+        "Idli Sambar":       "Idli",
+        "Sarson da Saag":    "Sarson_da_saag",
+        "Lucknowi Biryani":  "Lucknawi_cuisine",
+        "Tunday Kababi":     "Tunde_ke_kabab",
+        "Litti Chokha":      "Litti_chokha",
+        "Dal Baati Churma":  "Dal_baati_churma",
+        "Laal Maas":         "Laal_maans",
+        "Ker Sangri":        "Ker_sangri",
+        "Hyderabadi Biryani":"Hyderabadi_biryani",
+        "Rogan Josh":        "Rogan_josh",
+        "Dum Aloo":          "Dum_aloo",
+        "Masala Dosa":       "Masala_dosa",
+        "Bisi Bele Bath":    "Bisi_bele_bath",
+        "Mysore Pak":        "Mysore_pak",
+        "Appam & Stew":      "Appam",
+        "Kerala Fish Curry": "Fish_curry",
+        "Puttu & Kadala":    "Puttu",
+        "Vada Pav":          "Vada_pav",
+        "Puran Poli":        "Puran_poli",
+        "Misal Pav":         "Misal_pav",
+        "Fish Curry Rice":   "Goan_cuisine",
+        "Prawn Balchão":     "Balchão",
+        "Amritsari Kulcha":  "Kulcha",
+        "Butter Chicken":    "Butter_chicken",
+        "Chole Bhature":     "Chole_bhature",
+        "Jalebi":            "Jalebi",
+        "Rosogolla":         "Rasgulla",
+        "Macher Jhol":       "Macher_jhol",
+        "Mishti Doi":        "Mishti_doi",
+        "Momos":             "Momo_(food)",
+        "Dhokla":            "Dhokla",
+        "Undhiyu":           "Undhiyu",
+        "Ghevar":            "Ghevar",
+        "Petha":             "Petha_(confectionery)",
+        "Bal Mithai":        "Bal_mithai",
+        "Haleem":            "Haleem",
+        "Masor Tenga":       "Masor_tenga",
+        "Thukpa":            "Thukpa",
+        "Butter Tea":        "Butter_tea",
+        "Tingmo":            "Tingmo",
+      };
+      const raw  = slugMap[dishName] || dishName.replace(/ /g, "_");
+      const slug = encodeURIComponent(raw);
       const res  = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${slug}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -597,13 +1014,49 @@ const FOOD = {
     } catch { imgEl.style.display = "none"; fallbackEl.style.display = "flex"; }
   }
 
+  const TASTE_LABEL = {
+    sp: { label:"🌶️ Spicy",   cls:"spicy"   },
+    sv: { label:"🧂 Savoury", cls:"savoury" },
+    sw: { label:"🍬 Sweet",   cls:"sweet"   },
+    mi: { label:"🌿 Mild",    cls:"mild"    },
+  };
+
   function dishHTML(x, color) {
     const bg = color + "18";
-    return `<li style="border-left-color:${color};background:${bg}" data-dish="${x.n}" data-emoji="${x.e}">
+    return `<li style="border-left-color:${color};background:${bg}" data-dish="${x.n}" data-emoji="${x.e}" data-taste="${x.t || 'sv'}" data-ki="${x.ki || ''}" data-city="${x.city || ''}" data-yr="${x.yr || ''}">
       <img class="dish-img" style="display:none" alt="${x.n}">
       <span class="dish-fallback">${x.e}</span>
-      <span class="dish-name">${x.n}</span>
+      <span class="dish-info">
+        <span class="dish-name">${x.n}</span>
+      </span>
     </li>`;
+  }
+
+  function attachTasteClicks() {
+    document.querySelectorAll(".dlist li[data-taste]").forEach(li => {
+      li.addEventListener("click", () => {
+        const info = li.querySelector(".dish-info");
+        const existing = info.querySelector(".dish-detail");
+        if (existing) { existing.remove(); return; }
+
+        const t    = li.dataset.taste;
+        const ki   = li.dataset.ki;
+        const city = li.dataset.city;
+        const yr   = li.dataset.yr;
+        const { label, cls } = TASTE_LABEL[t] || TASTE_LABEL.sv;
+
+        const detail = document.createElement("div");
+        detail.className = "dish-detail";
+        detail.innerHTML = `
+          <span class="taste-badge ${cls}">${label}</span>
+          ${city ? `<span class="city-tag">📍 Best in ${city}</span>` : ""}
+          ${yr   ? `<span class="year-tag">📅 Famous since ${yr}</span>` : ""}
+          ${ki   ? `<span class="ingredients-label">🧄 Key Ingredients</span>
+                    <span class="ingredients-text">${ki}</span>` : ""}
+        `;
+        info.appendChild(detail);
+      });
+    });
   }
 
   function loadImages() {
@@ -614,57 +1067,24 @@ const FOOD = {
 
 
 
-  function openPopup(name) {
+  const panel = document.getElementById("side-panel");
 
+  function showSidePanel(name) {
     const d = FOOD[name];
-
     const color = (d && d.color) || "#ff9933";
-
-    document.getElementById("popup").style.borderTop = `5px solid ${color}`;
-
     if (!d) {
-
-      content.innerHTML = `<div class="sname" style="color:${color}">${name}</div>
-
+      panel.innerHTML = `<div class="sname" style="color:${color}">${name}</div>
         <div class="cap" style="margin-top:10px;color:#bbb">Dish data coming soon!</div>`;
-
     } else {
-
-      content.innerHTML = `
-
+      panel.style.borderTop = `5px solid ${color}`;
+      panel.innerHTML = `
         <div class="sname" style="color:${color}">${name}</div>
-
         <div class="cap">🏛️ Capital: ${d.cap}</div>
-
         <div class="dtitle" style="color:${color}">🍽️ Famous Dishes</div>
-
         <ul class="dlist">${d.dishes.map(x => dishHTML(x, color)).join("")}</ul>`;
     }
-    overlay.classList.add("show");
-    // load images after DOM is updated
-    requestAnimationFrame(loadImages);
-
+    requestAnimationFrame(() => { loadImages(); attachTasteClicks(); });
   }
-
-
-
-  function closePopup() {
-
-    overlay.classList.remove("show");
-
-    document.getElementById("popup").style.borderTop = "";
-
-    d3.selectAll(".state.active").classed("active", false);
-
-  }
-
-
-
-  closeBtn.addEventListener("click", closePopup);
-
-  overlay.addEventListener("click", e => { if (e.target === overlay) closePopup(); });
-
-  document.addEventListener("keydown", e => { if (e.key === "Escape") closePopup(); });
 
 })();
 
